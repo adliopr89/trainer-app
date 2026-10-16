@@ -165,6 +165,25 @@ try {
   `);
   await waitFor(`document.querySelector('.h-weight').textContent.trim() === '59 кг'`);
   await check('перезапись даты не плодит строки', `document.querySelectorAll('.wrow').length`, 1);
+  // дата в будущем — отклоняется
+  await ev(`
+    const tm = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
+    document.querySelector('#new-date').value = tm;
+    document.querySelector('#new-weight').value = '58';
+    document.querySelector('#add-w').click();
+  `);
+  await sleep(300);
+  await check('будущая дата отклонена', `document.querySelector('#w-err').textContent.length > 0`, true);
+  await check('строк не прибавилось', `document.querySelectorAll('.wrow').length`, 1);
+  // редактирование имени/возраста в профиле
+  await ev(`document.querySelector('#p-toggle').click()`);
+  await ev(`
+    document.querySelector('#p-name').value = 'Новое Имя';
+    document.querySelector('#p-age').value = '31';
+    document.querySelector('#p-save').click();
+  `);
+  await waitFor(`document.querySelector('.h-name').textContent.includes('Новое Имя, 31')`);
+  await check('имя и возраст обновились в шапке', `document.querySelector('.h-name').textContent.includes('Новое Имя, 31')`, true);
 
   console.log('Питание:');
   await ev(`[...document.querySelectorAll('#tabs button')].find(b => b.textContent === 'Питание').click()`);

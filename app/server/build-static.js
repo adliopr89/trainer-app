@@ -23,8 +23,8 @@ fs.writeFileSync(path.join(OUT, 'data.js'), 'window.APP_DATA=' + JSON.stringify(
 // может долго отдавать старый app.js из кэша после выкладки на Pages.
 const v = Date.now().toString(36);
 const html = fs.readFileSync(path.join(__dirname, '..', 'webapp', 'index.html'), 'utf8')
-  .replace('data.js', `data.js?v=${v}`)
-  .replace('app.js', `app.js?v=${v}`)
+  .replace('<script src="app.js"></script>',
+    `<script src="data.js?v=${v}"></script>\n<script src="app.js?v=${v}"></script>`)
   .replace('style.css', `style.css?v=${v}`);
 fs.writeFileSync(path.join(OUT, 'index.html'), html);
 

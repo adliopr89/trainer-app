@@ -342,7 +342,8 @@ async function viewPrograms() {
     const groupTxt = groups.find(g => g.id === p.group)?.title || '';
     const el = document.createElement('div');
     el.className = 'card' + (mine ? '' : ' locked');
-    el.innerHTML = `<div class="t">${p.title}${mine ? '' : ' <span class="badge lock">🔒</span>'}</div>
+    const passedBadge = p.total && p.done === p.total ? ' <span class="badge done">🏁 пройдена</span>' : '';
+    el.innerHTML = `<div class="t">${p.title}${mine ? '' : ' <span class="badge lock">🔒</span>'}${passedBadge}</div>
       <div class="meta">${p.level} · ${packTxt} · ${p.weeks} недели</div>
       <div class="s">${p.desc}</div>
       <div class="tags">${groupTxt}</div>
@@ -369,8 +370,8 @@ async function viewProgram(s) {
     const done = w.workouts.reduce((a, d) => a + d.doneCount, 0);
     const total = w.workouts.reduce((a, d) => a + d.total, 0);
     const badge = w.locked ? '<span class="badge lock">🔒</span>'
-      : w.num === p.weekNum ? '<span class="badge part">текущая</span>'
-      : done === total && total > 0 ? '<span class="badge done">готово</span>' : '';
+      : done === total && total > 0 ? '<span class="badge done">готово</span>'
+      : w.num === p.weekNum ? '<span class="badge part">текущая</span>' : '';
     const when = w.opensIn === 1 ? 'завтра' : `через ${w.opensIn} дн.`;
     el.innerHTML = `<div class="t">Неделя ${w.num} ${badge}</div>
       <div class="s">${w.locked ? `Откроется ${when}` : `${w.workouts.length} занятий · ${done}/${total} упражнений`}</div>
@@ -441,9 +442,9 @@ async function viewWorkout(s) {
         </table>
         <button class="btn save">${saved?.done ? 'Обновить результат' : 'Отметить выполненным'}</button>
         ${saved?.done ? '<button class="btn ghost und">Снять отметку</button>' : ''}
-        ${saved ? `<div class="hist"><b>Последняя запись:</b><div>${formatSets(saved.sets)} · ${new Date(saved.date).toLocaleDateString('ru')}</div>
+        ${saved ? `<div class="hist"><b>Последняя запись:</b><div>${formatSets(saved.sets)} · ${fmtShort(saved.date)}</div>
           ${saved.hist?.length ? `<b>Предыдущие:</b>${saved.hist.slice(0, 4).map(h =>
-            `<div>${formatSets(h.sets)} · ${new Date(h.date).toLocaleDateString('ru')}</div>`).join('')}` : ''}</div>` : ''}
+            `<div>${formatSets(h.sets)} · ${fmtShort(h.date)}</div>`).join('')}` : ''}</div>` : ''}
       </div>`;
     // тап по шапке — разворачивает/сворачивает; клики внутри тела не сворачивают
     el.querySelector('.ex-head').onclick = ev => {
@@ -510,6 +511,7 @@ async function viewMenu(s) {
 
 // ---------- Мой профиль ----------
 let wFormOpen = false; // форма «Внести данные» — держим открытой между рендерами
+let pFormOpen = false; // форма «Изменить имя/возраст» — то же
 
 async function viewProfile() {
   const p = getProfile();
@@ -532,7 +534,37 @@ async function viewProfile() {
       <div class="err" id="w-err"></div>
       <button class="btn" id="add-w">Сохранить</button>
       <div id="w-list"></div>
+    </div>
+    <button class="btn ghost" id="p-toggle">${pFormOpen ? 'Скрыть' : 'Изменить имя/возраст'}</button>
+    <div class="card form" id="p-form" style="display:${pFormOpen ? '' : 'none'}">
+      <label>Имя<input id="p-name" type="text" value="${esc(p.name)}"></label>
+      <div class="err" id="e-pname"></div>
+      <label>Возраст<input id="p-age" type="number" inputmode="numeric" min="14" max="99" value="${p.age}"></label>
+      <div class="err" id="e-page"></div>
+      <button class="btn" id="p-save">Сохранить</button>
     </div>`;
+  $app.querySelector('#p-toggle').onclick = () => {
+    pFormOpen = !pFormOpen;
+    $app.querySelector('#p-form').style.display = pFormOpen ? '' : 'none';
+    $app.querySelector('#p-toggle').textContent = pFormOpen ? 'Скрыть' : 'Изменить имя/возраст';
+  };
+  $app.querySelector('#p-save').onclick = () => {
+    const name = $app.querySelector('#p-name').value.trim();
+    const age = parseInt($app.querySelector('#p-age').value) || 0;
+    $app.querySelector('#e-pname').textContent = name ? '' : 'Как тебя зовут?';
+    $app.querySelector('#e-page').textContent = age >= 14 && age <= 99 ? '' : 'Возраст от 14 до 99';
+    if (!name || age < 14 || age > 99) {
+      tg?.HapticFeedback?.notificationOccurred('error');
+      return;
+    }
+    const pr = getProfile();
+    pr.name = name; pr.age = age;
+    ls.set('profile', pr);
+    tg?.HapticFeedback?.notificationOccurred('success');
+    toast('Сохранено');
+    renderHead();
+    render();
+  };
   const $wl = $app.querySelector('#w-list');
   for (const e of [...p.weights].reverse().slice(0, 7)) {
     const row = document.createElement('div');
@@ -559,8 +591,8 @@ async function viewProfile() {
       tg?.HapticFeedback?.notificationOccurred('error');
       return;
     }
-    if (!d) {
-      $app.querySelector('#w-err').textContent = 'Выбери дату.';
+    if (!d || d > today) { // руками можно ввести дату «в будущее» мимо max
+      $app.querySelector('#w-err').textContent = 'Дата не позже сегодняшней.';
       tg?.HapticFeedback?.notificationOccurred('error');
       return;
     }
