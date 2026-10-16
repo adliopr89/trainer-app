@@ -1,0 +1,123 @@
+:root {
+  --bg: var(--tg-theme-bg-color, #0e0f13);
+  --text: var(--tg-theme-text-color, #e8e9ed);
+  --hint: var(--tg-theme-hint-color, #9aa0ad);
+  --btn: var(--tg-theme-button-color, #4f7cff);
+  --btn-text: var(--tg-theme-button-text-color, #fff);
+  --card: var(--tg-theme-secondary-bg-color, #171a21);
+  --line: rgba(128, 128, 128, .18);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  padding-bottom: 76px;
+}
+
+#app { padding: 14px 14px 0; }
+
+/* нижние табы */
+#tabs {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  display: flex; gap: 6px;
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  background: var(--card);
+  border-top: 1px solid var(--line);
+}
+#tabs button {
+  flex: 1; padding: 10px 0; border: none; border-radius: 10px;
+  background: transparent; color: var(--hint);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+}
+#tabs button.active { background: var(--btn); color: var(--btn-text); }
+
+/* карточки */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+.card .t { font-weight: 600; font-size: 15px; }
+.card .s { color: var(--hint); font-size: 13px; margin-top: 2px; }
+.card .prog { margin-top: 8px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.card .prog i { display: block; height: 100%; background: var(--btn); }
+
+h2.sec { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--hint); margin: 18px 4px 10px; }
+h1.page { font-size: 20px; margin: 4px 4px 14px; }
+
+.back {
+  background: none; border: none; color: var(--btn);
+  font-size: 15px; padding: 4px 0 10px; cursor: pointer;
+}
+
+.badge {
+  display: inline-block; font-size: 12px; font-weight: 700;
+  padding: 3px 9px; border-radius: 20px; margin-left: 8px;
+}
+.badge.done { background: #143d24; color: #6fdc96; }
+.badge.part { background: #3d2a14; color: #ffb45e; }
+.badge.lock { background: var(--line); }
+.card.locked { opacity: .45; cursor: default; }
+
+/* экран упражнения */
+.video-box {
+  width: 100%; aspect-ratio: 16/9; border-radius: 14px;
+  background: var(--card); border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--hint); font-size: 14px; margin-bottom: 14px; overflow: hidden;
+}
+.video-box iframe, .video-box video { width: 100%; height: 100%; border: 0; }
+
+.plan { font-size: 15px; margin-bottom: 12px; }
+.plan b { color: var(--btn); }
+
+table.sets { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+table.sets th { font-size: 12px; color: var(--hint); font-weight: 500; text-align: left; padding: 6px 4px; }
+table.sets td { padding: 4px; }
+table.sets input {
+  width: 100%; padding: 9px 10px; border-radius: 9px;
+  border: 1px solid var(--line); background: var(--card);
+  color: var(--text); font-size: 15px;
+}
+table.sets input:focus { outline: 2px solid var(--btn); border-color: transparent; }
+
+.btn {
+  display: block; width: 100%; padding: 13px;
+  border: none; border-radius: 12px;
+  background: var(--btn); color: var(--btn-text);
+  font-size: 16px; font-weight: 600; cursor: pointer;
+}
+.btn.ghost { background: var(--card); color: var(--text); border: 1px solid var(--line); margin-bottom: 10px; }
+
+.hist { font-size: 13px; color: var(--hint); margin-top: 12px; }
+.hist div { padding: 6px 0; border-bottom: 1px solid var(--line); }
+
+/* аккордеон упражнения */
+.card.ex { cursor: default; }
+.ex-head { cursor: pointer; }
+.ex-head .t::after { content: "›"; float: right; color: var(--hint); transition: transform .2s; }
+.card.ex.open .ex-head .t::after { transform: rotate(90deg); }
+.ex-body { display: none; margin-top: 12px; }
+.card.ex.open .ex-body { display: block; }
+.tech {
+  font-size: 14px; color: var(--text); line-height: 1.5;
+  background: var(--bg); border-radius: 10px;
+  padding: 10px 12px; margin-bottom: 12px;
+}
+.plan-box {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg); border: 1px solid var(--line);
+  border-radius: 10px; padding: 10px 12px; margin-bottom: 12px;
+  font-size: 15px;
+}
+.plan-lbl {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--hint);
+}
+table.sets input::placeholder { color: var(--hint); opacity: .6; }
