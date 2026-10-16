@@ -1,6 +1,31 @@
 const tg = window.Telegram?.WebApp;
 tg?.expand();
 tg?.ready();
+tg?.setHeaderColor?.('#0a090b');
+tg?.setBackgroundColor?.('#0a090b');
+tg?.enableClosingConfirmation?.(); // подтверждение при закрытии — не потерять введённые данные
+tg?.disableVerticalSwipes?.();     // свайп вниз не сворачивает мини-апп
+tg?.BackButton?.onClick(() => back());
+
+// Светлая тема Telegram → светлая палитра приложения
+(() => {
+  const hex = tg?.themeParams?.bg_color;
+  const n = hex && parseInt(hex.slice(1), 16);
+  if (!n) return;
+  const lum = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  if (lum <= 0.6) return; // тема тёмная — оставляем фирменную палитру
+  const r = document.documentElement.style;
+  r.setProperty('--bg', '#f6f4f5');
+  r.setProperty('--text', '#1e1a1c');
+  r.setProperty('--hint', '#8a8188');
+  r.setProperty('--card', '#ffffff');
+  r.setProperty('--line', '#e8e2e6');
+  r.setProperty('--pink-dim', '#ffe3ec');
+  r.setProperty('--pink-soft', '#e0447a');
+  document.documentElement.style.colorScheme = 'light'; // системные контролы (дата-инпут) в светлой теме
+  tg.setHeaderColor?.('#f6f4f5');
+  tg.setBackgroundColor?.('#f6f4f5');
+})();
 
 const INIT_DATA = tg?.initData || '';
 
@@ -11,9 +36,13 @@ const fetchApi = (path, opts = {}) =>
   }).then(r => r.json());
 
 // --- localStorage ---
+// Ключи привязаны к tg id — два ТГ-аккаунта на одном устройстве не делят профиль/логи.
+// Без initData (обычный браузер) — общие ключи, как раньше.
+const TGID = tg?.initDataUnsafe?.user?.id || '';
 const ls = {
-  get(k, f) { try { return JSON.parse(localStorage.getItem(k)) ?? f; } catch { return f; } },
-  set(k, v) { localStorage.setItem(k, JSON.stringify(v)); },
+  key: k => (TGID ? `${k}_${TGID}` : k),
+  get(k, f) { try { return JSON.parse(localStorage.getItem(ls.key(k))) ?? f; } catch { return f; } },
+  set(k, v) { localStorage.setItem(ls.key(k), JSON.stringify(v)); },
 };
 
 // --- Локальный режим (статический хостинг): данные из window.APP_DATA, логи в localStorage ---
@@ -21,23 +50,31 @@ function localApi(path, opts = {}) {
   const D = window.APP_DATA;
   const logs = ls.get('logs', {});
   const since = ls.get('profile')?.since || new Date().toISOString().slice(0, 10);
+  // защита от кривой даты регистрации: NaN или будущее → считаем от сегодня
+  const start = Date.parse(since);
+  const startMs = Number.isFinite(start) && start <= Date.now() ? start : Date.now();
   const weekNumOf = total =>
-    Math.min(Math.max(Math.floor((Date.now() - Date.parse(since)) / 6048e5) + 1, 1), total);
+    Math.min(Math.max(Math.floor((Date.now() - startMs) / 6048e5) + 1, 1), total);
   const opensIn = num =>
-    Math.max(0, Math.ceil((Date.parse(since) + (num - 1) * 7 * 864e5 - Date.now()) / 864e5));
+    Math.max(0, Math.ceil((startMs + (num - 1) * 7 * 864e5 - Date.now()) / 864e5));
 
   if (path === '/api/programs') {
-    return Promise.resolve(D.programs.map(p => ({
-      id: p.id, title: p.title, desc: p.desc,
-      level: p.level, packs: p.packs, group: p.group,
-      weeks: p.weeks.length,
-    })));
+    return Promise.resolve(D.programs.map(p => {
+      const ex = p.weeks.flatMap(w => w.workouts.flatMap(wo => wo.exercises));
+      return {
+        id: p.id, title: p.title, desc: p.desc,
+        level: p.level, packs: p.packs, group: p.group,
+        weeks: p.weeks.length,
+        total: ex.length,
+        done: ex.filter(e => logs[e.id]?.done).length,
+      };
+    }));
   }
   if (path === '/api/groups') {
     return Promise.resolve(D.groups);
   }
   if (path === '/api/menus') {
-    return Promise.resolve(D.menus.map(m => ({ id: m.id, title: m.title, desc: m.desc })));
+    return Promise.resolve(D.menus.map(m => ({ id: m.id, title: m.title, desc: m.desc, kbju: m.kbju })));
   }
   if (path.startsWith('/api/menus/')) {
     const m = D.menus.find(x => x.id === path.split('/').pop());
@@ -78,7 +115,11 @@ function localApi(path, opts = {}) {
   }
   if (path === '/api/log' && opts.method === 'POST') {
     const { exerciseId, sets, done } = JSON.parse(opts.body);
-    logs[exerciseId] = { sets, done: !!done, date: new Date().toISOString() };
+    const prev = logs[exerciseId];
+    // история: последние 5 записей по упражнению (самая свежая — первая)
+    const hist = [prev && { sets: prev.sets, date: prev.date }, ...(prev?.hist || [])]
+      .filter(Boolean).slice(0, 5);
+    logs[exerciseId] = { sets, done: !!done, date: new Date().toISOString(), hist };
     ls.set('logs', logs);
     return Promise.resolve({ ok: true });
   }
@@ -117,6 +158,12 @@ function saveWeight(w, d) {
   ls.set('profile', p);
 }
 
+function delWeight(d) {
+  const p = getProfile();
+  p.weights = p.weights.filter(x => x.d !== d);
+  ls.set('profile', p);
+}
+
 const $app = document.getElementById('app');
 const $tabs = document.getElementById('tabs');
 const $head = document.getElementById('head');
@@ -137,7 +184,7 @@ function renderHead() {
     <button class="h-pack">${pack.emoji} ${pack.title}<span> · ${leftTxt}</span></button>
     <button class="h-prof">Профиль</button>
     <div class="h-name">${p.name}, ${p.age}</div>
-    <div class="h-weight">${last.w}<small> кг</small></div>
+    <div class="h-weight">${last ? last.w : '—'}<small> кг</small></div>
     <div class="h-ava">${ava ? `<img src="${ava}" alt="">` : initial}</div>`;
   const toProfile = () => { tab = 'profile'; stack = [{ view: 'profile' }]; render(); };
   $head.querySelector('.h-pack').onclick = toProfile;
@@ -181,18 +228,26 @@ function viewOnboarding() {
     <h1 class="page">Давай познакомимся</h1>
     <div class="lead">Заполни данные — по ним соберём нагрузку и питание.</div>
     <div class="card form">
-      <label>Имя<input id="f-name" type="text" placeholder="Как тебя зовут"></label>
+      <label>Имя<input id="f-name" type="text" placeholder="Как тебя зовут" value="${esc(tg?.initDataUnsafe?.user?.first_name || '')}"></label>
+      <div class="err" id="e-name"></div>
       <label>Возраст<input id="f-age" type="number" inputmode="numeric" min="14" max="99" placeholder="30"></label>
+      <div class="err" id="e-age"></div>
       <label>Вес, кг<input id="f-weight" type="number" inputmode="decimal" min="30" max="300" step="0.1" placeholder="65"></label>
-      <div class="err" id="f-err"></div>
+      <div class="err" id="e-weight"></div>
       <button class="btn" id="f-go">Начать</button>
     </div>`;
+  const setErr = (f, msg) => {
+    $app.querySelector('#e-' + f).textContent = msg;
+    $app.querySelector('#f-' + f).classList.toggle('bad', !!msg);
+  };
   $app.querySelector('#f-go').onclick = () => {
     const name = $app.querySelector('#f-name').value.trim();
     const age = parseInt($app.querySelector('#f-age').value) || 0;
     const w = parseFloat($app.querySelector('#f-weight').value) || 0;
+    setErr('name', name ? '' : 'Как тебя зовут?');
+    setErr('age', age >= 14 && age <= 99 ? '' : 'Возраст от 14 до 99');
+    setErr('weight', w >= 30 && w <= 300 ? '' : 'Вес от 30 до 300 кг');
     if (!name || age < 14 || age > 99 || w < 30 || w > 300) {
-      $app.querySelector('#f-err').textContent = 'Проверь данные: имя, возраст 14–99, вес 30–300 кг.';
       tg?.HapticFeedback?.notificationOccurred('error');
       return;
     }
@@ -212,7 +267,7 @@ function viewOnboarding() {
 
 // ---------- Программы ----------
 // фильтры: пакет · «доступное мне» · группа тренировок
-const F = { pack: 'all', onlyMine: false, group: 'all' };
+const F = { pack: 'all', onlyMine: true, group: 'all' };
 
 async function viewPrograms() {
   const [programs, groups] = await Promise.all([api('/api/programs'), api('/api/groups')]);
@@ -263,7 +318,9 @@ async function viewPrograms() {
     el.innerHTML = `<div class="t">${p.title}${mine ? '' : ' <span class="badge lock">🔒</span>'}</div>
       <div class="meta">${p.level} · ${packTxt} · ${p.weeks} недели</div>
       <div class="s">${p.desc}</div>
-      <div class="tags">${groupTxt}</div>`;
+      <div class="tags">${groupTxt}</div>
+      ${p.total ? `<div class="prog"><i style="width:${(p.done / p.total) * 100}%"></i></div>
+        <div class="s">${p.done}/${p.total} упражнений</div>` : ''}`;
     el.onclick = mine
       ? () => nav({ view: 'program', id: p.id })
       : () => tg?.HapticFeedback?.notificationOccurred('warning');
@@ -304,10 +361,12 @@ async function viewWeek(s) {
   $app.innerHTML = `<button class="back">‹ Назад</button>
     <h1 class="page">${s.title} — неделя ${w.num}</h1>`;
   $app.querySelector('.back').onclick = back;
+  const nextId = w.workouts.find(d => d.doneCount < d.total)?.id;
   for (const d of w.workouts) {
     const el = document.createElement('div');
     el.className = 'card';
     const badge = d.doneCount === d.total && d.total > 0 ? '<span class="badge done">готово</span>'
+      : d.id === nextId ? '<span class="badge part">следующее</span>'
       : d.doneCount > 0 ? `<span class="badge part">${d.doneCount}/${d.total}</span>` : '';
     el.innerHTML = `<div class="t">Занятие ${d.num} — ${d.title} ${badge}</div>
       <div class="s">${d.total} упражнения</div>
@@ -351,7 +410,9 @@ async function viewWorkout(s) {
           }).join('')}
         </table>
         <button class="btn save">${saved?.done ? 'Обновить результат' : 'Отметить выполненным'}</button>
-        ${saved ? `<div class="hist"><b>Последняя запись:</b><div>${formatSets(saved.sets)} · ${new Date(saved.date).toLocaleDateString('ru')}</div></div>` : ''}
+        ${saved ? `<div class="hist"><b>Последняя запись:</b><div>${formatSets(saved.sets)} · ${new Date(saved.date).toLocaleDateString('ru')}</div>
+          ${saved.hist?.length ? `<b>Предыдущие:</b>${saved.hist.slice(0, 4).map(h =>
+            `<div>${formatSets(h.sets)} · ${new Date(h.date).toLocaleDateString('ru')}</div>`).join('')}` : ''}</div>` : ''}
       </div>`;
     // тап по шапке — разворачивает/сворачивает; клики внутри тела не сворачивают
     el.querySelector('.ex-head').onclick = ev => {
@@ -366,7 +427,9 @@ async function viewWorkout(s) {
       }));
       await api('/api/log', { method: 'POST', body: JSON.stringify({ exerciseId: e.id, sets, done: true }) });
       tg?.HapticFeedback?.notificationOccurred('success');
-      render();
+      await render();
+      // автопереход: раскрываем следующее упражнение
+      $app.querySelectorAll('.card.ex')[i + 1]?.classList.add('open');
     };
     $app.appendChild(el);
   });
@@ -389,42 +452,58 @@ async function viewMenu(s) {
   const m = await api(`/api/menus/${s.id}`);
   $app.innerHTML = `<button class="back">‹ Назад</button>
     <h1 class="page">${m.title}</h1>
-    <div class="lead">${m.desc}</div>`;
+    <div class="lead">${m.desc}${m.kbju ? ` · ${m.kbju}` : ''}</div>`;
   $app.querySelector('.back').onclick = back;
   for (const meal of m.meals) {
     const el = document.createElement('div');
     el.className = 'card meal';
-    el.innerHTML = `<div class="t">${meal.name}</div><div class="s">${meal.dish}</div>`;
+    el.innerHTML = `<div class="t">${meal.name}${meal.kcal ? `<span class="kcal"> ~${meal.kcal} ккал</span>` : ''}</div><div class="s">${meal.dish}</div>`;
     $app.appendChild(el);
   }
 }
 
 // ---------- Мой профиль ----------
+let wFormOpen = false; // форма «Внести данные» — держим открытой между рендерами
+
 async function viewProfile() {
   const p = getProfile();
   const last = p.weights[p.weights.length - 1];
   const first = p.weights[0];
-  const diff = +(last.w - first.w).toFixed(1);
+  const diff = last && first ? +(last.w - first.w).toFixed(1) : 0;
   const diffTxt = diff < 0 ? `${diff}` : diff > 0 ? `+${diff}` : '±0';
   const today = new Date().toISOString().slice(0, 10);
   $app.innerHTML = `
     <h2 class="sec">График веса</h2>
     <div class="card chart-card">
-      <div class="s start-line">Старт: ${first.w} кг · ${fmtDate(first.d)} · дельта ${diffTxt} кг</div>
-      ${chartHtml(p.weights)}
+      ${last
+        ? `<div class="s start-line">Старт: ${first.w} кг · ${fmtDate(first.d)} · дельта ${diffTxt} кг</div>${chartHtml(p.weights)}`
+        : '<div class="s">Записей нет — внеси первый вес</div>'}
     </div>
-    <button class="btn ghost" id="w-toggle">Внести данные</button>
-    <div class="card form" id="w-form" style="display:none">
+    <button class="btn ghost" id="w-toggle">${wFormOpen ? 'Скрыть' : 'Внести данные'}</button>
+    <div class="card form" id="w-form" style="display:${wFormOpen ? '' : 'none'}">
       <label>Дата<input id="new-date" type="date" max="${today}" value="${today}"></label>
-      <label>Вес, кг<input id="new-weight" type="number" inputmode="decimal" step="0.1" min="30" max="300" placeholder="${last.w}"></label>
+      <label>Вес, кг<input id="new-weight" type="number" inputmode="decimal" step="0.1" min="30" max="300" placeholder="${last?.w ?? ''}"></label>
       <div class="err" id="w-err"></div>
       <button class="btn" id="add-w">Сохранить</button>
+      <div id="w-list"></div>
     </div>`;
+  const $wl = $app.querySelector('#w-list');
+  for (const e of [...p.weights].reverse().slice(0, 7)) {
+    const row = document.createElement('div');
+    row.className = 'wrow';
+    row.innerHTML = `<span>${fmtDate(e.d)}</span><b>${e.w} кг</b><button class="wdel" title="Удалить запись">×</button>`;
+    row.querySelector('.wdel').onclick = () => {
+      delWeight(e.d);
+      tg?.HapticFeedback?.impactOccurred('light');
+      renderHead();
+      render();
+    };
+    $wl.appendChild(row);
+  }
   $app.querySelector('#w-toggle').onclick = () => {
-    const f = $app.querySelector('#w-form');
-    const open = f.style.display !== 'none';
-    f.style.display = open ? 'none' : '';
-    $app.querySelector('#w-toggle').textContent = open ? 'Внести данные' : 'Скрыть';
+    wFormOpen = !wFormOpen;
+    $app.querySelector('#w-form').style.display = wFormOpen ? '' : 'none';
+    $app.querySelector('#w-toggle').textContent = wFormOpen ? 'Скрыть' : 'Внести данные';
   };
   $app.querySelector('#add-w').onclick = () => {
     const w = parseFloat($app.querySelector('#new-weight').value);
@@ -465,14 +544,21 @@ function chartHtml(weights) {
     `<circle cx="${x(i)}" cy="${y(p.w)}" r="3.5" class="dot"/>
      <text x="${x(i)}" y="${H - 6}" class="lbl" text-anchor="middle">${fmtShort(p.d)}</text>`).join('');
 
+  // значения веса у первой и последней точки
+  const valAt = i =>
+    `<text x="${x(i)}" y="${Math.max(10, y(weights[i].w) - 8)}" class="lbl val" text-anchor="middle">${weights[i].w}</text>`;
+  const vals = n === 1 ? valAt(0) : valAt(0) + valAt(n - 1);
+
   return `<svg viewBox="0 0 ${W} ${H}" class="chart">
     ${grid}
     ${n > 1 ? `<polyline points="${pts}" class="line"/>` : ''}
     ${dots}
+    ${vals}
     ${n === 1 ? `<text x="${W / 2}" y="${PT + 10}" class="lbl" text-anchor="middle">Первая запись — продолжай взвешиваться</text>` : ''}
   </svg>`;
 }
 
+const esc = s => String(s).replace(/[<>&"]/g, '');
 const fmtDate = iso => new Date(iso).toLocaleDateString('ru');
 const fmtShort = iso => new Date(iso).toLocaleDateString('ru', { day: 'numeric', month: 'numeric' });
 
@@ -490,6 +576,8 @@ function formatSets(sets) {
 async function render() {
   renderHead();
   renderTabs();
+  // системная кнопка «назад» Telegram на вложенных экранах
+  if (tg?.BackButton) stack.length > 1 ? tg.BackButton.show() : tg.BackButton.hide();
   const s = stack[stack.length - 1];
   if (s.view === 'programs') await viewPrograms();
   else if (s.view === 'program') await viewProgram(s);

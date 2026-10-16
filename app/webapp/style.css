@@ -216,3 +216,17 @@ input[type="date"] { color-scheme: dark; }
 .chart .dot { fill: var(--pink); }
 .chart .grid { stroke: var(--line); stroke-width: 1; }
 .chart .lbl { fill: var(--hint); font-size: 10px; font-family: inherit; }
+.chart .lbl.val { fill: var(--pink); font-weight: 700; font-size: 11px; }
+
+/* список записей веса с удалением */
+.wrow { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.wrow:last-child { border-bottom: 0; }
+.wrow b { margin-left: auto; }
+.wdel { background: none; border: 0; color: var(--hint); font-size: 20px; line-height: 1; cursor: pointer; padding: 0 4px; }
+.wdel:active { color: var(--pink); }
+
+/* невалидное поле формы */
+.card.form input.bad { border-color: var(--pink); outline: 1px solid var(--pink); }
+
+/* ккал у приёма пищи */
+.meal .kcal { color: var(--pink); font-size: 12px; font-weight: 700; }

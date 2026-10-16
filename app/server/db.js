@@ -101,36 +101,39 @@ const MENUS = [
     id: 'menu-deficit',
     title: 'Похудение · ~1500 ккал',
     desc: 'Плавный дефицит без голодовок. Белок в каждом приёме пищи.',
+    kbju: 'Б 110 · Ж 50 · У 150',
     meals: [
-      { name: 'Завтрак', dish: 'Овсянка на молоке + яйцо + яблоко' },
-      { name: 'Перекус', dish: 'Творог 5% + горсть ягод' },
-      { name: 'Обед', dish: 'Куриная грудка + гречка + салат из овощей с маслом' },
-      { name: 'Перекус', dish: 'Кефир + цельнозерновой хлебец' },
-      { name: 'Ужин', dish: 'Запечённая рыба + овощи на пару' },
+      { name: 'Завтрак', dish: 'Овсянка на молоке + яйцо + яблоко', kcal: 380 },
+      { name: 'Перекус', dish: 'Творог 5% + горсть ягод', kcal: 180 },
+      { name: 'Обед', dish: 'Куриная грудка + гречка + салат из овощей с маслом', kcal: 480 },
+      { name: 'Перекус', dish: 'Кефир + цельнозерновой хлебец', kcal: 160 },
+      { name: 'Ужин', dish: 'Запечённая рыба + овощи на пару', kcal: 300 },
     ],
   },
   {
     id: 'menu-support',
     title: 'Поддержание · ~2000 ккал',
     desc: 'Держим форму: баланс белков, жиров и углеводов.',
+    kbju: 'Б 130 · Ж 65 · У 220',
     meals: [
-      { name: 'Завтрак', dish: 'Яичница из 2 яиц + тост с авокадо + кофе' },
-      { name: 'Перекус', dish: 'Греческий йогурт + орехи' },
-      { name: 'Обед', dish: 'Говядина + рис + тушёные овощи' },
-      { name: 'Перекус', dish: 'Бутерброд с сыром + помидор' },
-      { name: 'Ужин', dish: 'Индейка + булгур + салат' },
+      { name: 'Завтрак', dish: 'Яичница из 2 яиц + тост с авокадо + кофе', kcal: 450 },
+      { name: 'Перекус', dish: 'Греческий йогурт + орехи', kcal: 260 },
+      { name: 'Обед', dish: 'Говядина + рис + тушёные овощи', kcal: 620 },
+      { name: 'Перекус', dish: 'Бутерброд с сыром + помидор', kcal: 270 },
+      { name: 'Ужин', dish: 'Индейка + булгур + салат', kcal: 400 },
     ],
   },
   {
     id: 'menu-mass',
     title: 'Набор массы · ~2500 ккал',
     desc: 'Профицит калорий для роста мышц. 5–6 приёмов пищи.',
+    kbju: 'Б 160 · Ж 85 · У 270',
     meals: [
-      { name: 'Завтрак', dish: 'Омлет из 3 яиц + овсянка с бананом и мёдом' },
-      { name: 'Перекус', dish: 'Творог + мюсли + молоко' },
-      { name: 'Обед', dish: 'Паста с курицей в сливочном соусе + салат' },
-      { name: 'Перекус', dish: 'Протеиновый коктейль + орехи' },
-      { name: 'Ужин', dish: 'Лосось + картофель + брокколи' },
+      { name: 'Завтрак', dish: 'Омлет из 3 яиц + овсянка с бананом и мёдом', kcal: 620 },
+      { name: 'Перекус', dish: 'Творог + мюсли + молоко', kcal: 400 },
+      { name: 'Обед', dish: 'Паста с курицей в сливочном соусе + салат', kcal: 700 },
+      { name: 'Перекус', dish: 'Протеиновый коктейль + орехи', kcal: 350 },
+      { name: 'Ужин', dish: 'Лосось + картофель + брокколи', kcal: 430 },
     ],
   },
 ];
@@ -163,7 +166,11 @@ function getUser(userId) {
 function saveLog(userId, exerciseId, entry) {
   const logs = loadJson(LOGS_FILE, {});
   logs[userId] = logs[userId] || {};
-  logs[userId][exerciseId] = { ...entry, date: new Date().toISOString() };
+  const prev = logs[userId][exerciseId];
+  // история: последние 5 записей по упражнению (самая свежая — первая)
+  const hist = [prev && { sets: prev.sets, date: prev.date }, ...(prev?.hist || [])]
+    .filter(Boolean).slice(0, 5);
+  logs[userId][exerciseId] = { ...entry, hist, date: new Date().toISOString() };
   saveJson(LOGS_FILE, logs);
 }
 
@@ -196,13 +203,17 @@ function getAccount(tgId) {
 // Текущая неделя считается от даты регистрации: неделя 1 сразу,
 // неделя 2 через 7 дней и т.д. (максимум — число недель программы)
 function currentWeekNum(startISO, totalWeeks = 4) {
-  const days = Math.floor((Date.now() - Date.parse(startISO)) / 864e5);
+  const start = Date.parse(startISO);
+  const days = Number.isFinite(start) && start <= Date.now()
+    ? Math.floor((Date.now() - start) / 864e5) : 0;
   return Math.min(Math.max(Math.floor(days / 7) + 1, 1), totalWeeks);
 }
 
 // Через сколько дней открывается неделя num (0 — уже открыта)
 function weekOpensIn(startISO, num) {
-  return Math.max(0, Math.ceil((Date.parse(startISO) + (num - 1) * 7 * 864e5 - Date.now()) / 864e5));
+  let start = Date.parse(startISO);
+  if (!Number.isFinite(start) || start > Date.now()) start = Date.now();
+  return Math.max(0, Math.ceil((start + (num - 1) * 7 * 864e5 - Date.now()) / 864e5));
 }
 
 function currentMonthName() {

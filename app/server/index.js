@@ -1,5 +1,6 @@
 require('dotenv').config();
 const path = require('path');
+const crypto = require('crypto');
 const express = require('express');
 const { Bot, InlineKeyboard } = require('grammy');
 const db = require('./db');
@@ -8,11 +9,24 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'webapp')));
 
+// Проверка подписи initData: https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
+function checkInitData(raw) {
+  if (!process.env.BOT_TOKEN || !raw) return false;
+  const params = new URLSearchParams(raw);
+  const hash = params.get('hash');
+  params.delete('hash');
+  const data = [...params.entries()].map(([k, v]) => `${k}=${v}`).sort().join('\n');
+  const secret = crypto.createHmac('sha256', 'WebAppData').update(process.env.BOT_TOKEN).digest();
+  return crypto.createHmac('sha256', secret).update(data).digest('hex') === hash;
+}
+
 // Пользователь из initData Telegram.
-// TODO: валидировать подпись initData (https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app)
+// В деве без BOT_TOKEN подпись не проверяется; с токеном — только валидный initData.
 function tgUser(req) {
   try {
-    const raw = new URLSearchParams(req.headers['x-tg-init-data'] || '').get('user');
+    const initData = req.headers['x-tg-init-data'] || '';
+    const raw = new URLSearchParams(initData).get('user');
+    if (process.env.BOT_TOKEN && !checkInitData(initData)) return null;
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -23,11 +37,17 @@ const tgUserId = req => tgUser(req)?.id || null;
 // --- API ---
 
 app.get('/api/programs', (req, res) => {
-  res.json(db.PROGRAMS.map(p => ({
-    id: p.id, title: p.title, desc: p.desc,
-    level: p.level, packs: p.packs, group: p.group,
-    weeks: p.weeks.length,
-  })));
+  const logs = db.getUserLogs(tgUserId(req));
+  res.json(db.PROGRAMS.map(p => {
+    const ex = p.weeks.flatMap(w => w.workouts.flatMap(wo => wo.exercises));
+    return {
+      id: p.id, title: p.title, desc: p.desc,
+      level: p.level, packs: p.packs, group: p.group,
+      weeks: p.weeks.length,
+      total: ex.length,
+      done: ex.filter(e => logs[e.id]?.done).length,
+    };
+  }));
 });
 
 app.get('/api/groups', (req, res) => res.json(db.GROUPS));
