@@ -1,11 +1,14 @@
 :root {
-  --bg: var(--tg-theme-bg-color, #0e0f13);
-  --text: var(--tg-theme-text-color, #e8e9ed);
-  --hint: var(--tg-theme-hint-color, #9aa0ad);
-  --btn: var(--tg-theme-button-color, #4f7cff);
-  --btn-text: var(--tg-theme-button-text-color, #fff);
-  --card: var(--tg-theme-secondary-bg-color, #171a21);
-  --line: rgba(128, 128, 128, .18);
+  --pink: #ff5c8a;
+  --pink-soft: #ff8fab;
+  --pink-dim: #3d1523;
+  --bg: #0a090b;
+  --text: #ece7ea;
+  --hint: #9a9199;
+  --btn: var(--pink);
+  --btn-text: #fff;
+  --card: #141114;
+  --line: #241d22;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -60,9 +63,9 @@ h1.page { font-size: 20px; margin: 4px 4px 14px; }
   display: inline-block; font-size: 12px; font-weight: 700;
   padding: 3px 9px; border-radius: 20px; margin-left: 8px;
 }
-.badge.done { background: #143d24; color: #6fdc96; }
-.badge.part { background: #3d2a14; color: #ffb45e; }
-.badge.lock { background: var(--line); }
+.badge.done { background: var(--pink-dim); color: var(--pink-soft); }
+.badge.part { background: var(--pink-dim); color: var(--pink-soft); opacity: .8; }
+.badge.lock { background: var(--line); color: var(--hint); }
 .card.locked { opacity: .45; cursor: default; }
 
 /* экран упражнения */
