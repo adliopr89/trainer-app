@@ -68,6 +68,11 @@ try {
 
   console.log('Онбординг:');
   await check('форма онбординга', `!!document.querySelector('#f-name')`, true);
+  await check('автофокус на имени', `document.activeElement.id`, 'f-name');
+  // Enter в поле = сабмит (пустая форма → ошибки)
+  await ev(`document.querySelector('#f-name').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))`);
+  await sleep(200);
+  await check('Enter сабмитит форму', `document.querySelector('#e-name').textContent.length > 0`, true);
   await ev(`document.querySelector('#f-go').click()`); // пустая форма → ошибки по полям
   await check('ошибка у поля имени', `document.querySelector('#e-name').textContent.length > 0`, true);
   await check('поле имени подсвечено', `document.querySelector('#f-name').classList.contains('bad')`, true);
@@ -122,9 +127,15 @@ try {
   await waitFor(`!!document.querySelector('.badge.done')`);
   await check('упражнение отмечено', `!!document.querySelector('.badge.done')`, true);
   await check('автопереход: 2-е упражнение раскрыто', `document.querySelectorAll('.card.ex')[1].classList.contains('open')`, true);
+  await sleep(800);
+  await check('подвезло к следующему упражнению', `window.scrollY > 0`, true);
   await ev(`document.querySelectorAll('.card.ex')[0].querySelector('.ex-head').click()`);
   await sleep(300);
   await check('карточка раскрылась, запись на месте', `document.querySelectorAll('.card.ex')[0].querySelector('.hist').textContent.includes('20×12')`, true);
+  await check('есть кнопка «Снять отметку»', `!!document.querySelectorAll('.card.ex')[0].querySelector('.und')`, true);
+  await ev(`document.querySelectorAll('.card.ex')[0].querySelector('.und').click()`);
+  await waitFor(`!document.querySelectorAll('.card.ex')[0].querySelector('.badge.done')`);
+  await check('отметка снята', `!document.querySelectorAll('.card.ex')[0].querySelector('.badge.done')`, true);
 
   console.log('Профиль:');
   await ev(`document.querySelector('.h-pack').click()`);

@@ -19,7 +19,16 @@ const data = {
 
 fs.writeFileSync(path.join(OUT, 'data.js'), 'window.APP_DATA=' + JSON.stringify(data) + ';');
 
-for (const f of ['index.html', 'app.js', 'style.css']) {
+// index.html: инжектим ?v=<сборка> в ссылки на ассеты — иначе вебвью ТГ/браузер
+// может долго отдавать старый app.js из кэша после выкладки на Pages.
+const v = Date.now().toString(36);
+const html = fs.readFileSync(path.join(__dirname, '..', 'webapp', 'index.html'), 'utf8')
+  .replace('data.js', `data.js?v=${v}`)
+  .replace('app.js', `app.js?v=${v}`)
+  .replace('style.css', `style.css?v=${v}`);
+fs.writeFileSync(path.join(OUT, 'index.html'), html);
+
+for (const f of ['app.js', 'style.css']) {
   fs.copyFileSync(path.join(__dirname, '..', 'webapp', f), path.join(OUT, f));
 }
 

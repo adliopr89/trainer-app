@@ -206,6 +206,8 @@ function renderHead() {
   const toProfile = () => { tab = 'profile'; stack = [{ view: 'profile' }]; render(); };
   $head.querySelector('.h-pack').onclick = toProfile;
   $head.querySelector('.h-prof').onclick = toProfile;
+  $head.querySelector('.h-name').onclick = toProfile; // имя и аватарка тоже ведут в профиль
+  $head.querySelector('.h-ava').onclick = toProfile;
 }
 
 // ---------- навигация ----------
@@ -281,6 +283,10 @@ function viewOnboarding() {
     renderHead();
     render();
   };
+  // Enter в любом поле = «Начать»
+  for (const inp of $app.querySelectorAll('#f-name, #f-age, #f-weight'))
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') $app.querySelector('#f-go').click(); });
+  $app.querySelector('#f-name').focus();
 }
 
 // ---------- Программы ----------
@@ -327,7 +333,7 @@ async function viewPrograms() {
 
   const $list = $app.querySelector('#plist');
   if (!list.length) {
-    $list.innerHTML = '<div class="empty">Под эти фильтры программ нет</div>';
+    $list.innerHTML = '<div class="empty">Под эти фильтры программ нет.<br>Попробуй снять «Доступное мне» или выбрать другую группу.</div>';
     return;
   }
   for (const p of list) {
@@ -428,12 +434,13 @@ async function viewWorkout(s) {
             const sv = saved?.sets?.[j] || {};
             return `<tr>
               <td>${j + 1}</td>
-              <td><input type="number" inputmode="decimal" data-j="${j}" data-f="w" value="${sv.w ?? ''}" placeholder="${e.weight || 0}"></td>
+              <td><input type="number" inputmode="decimal" data-j="${j}" data-f="w" value="${sv.w ?? ''}" placeholder="${e.weight || 'свой'}"></td>
               <td><input type="number" inputmode="numeric" data-j="${j}" data-f="r" value="${sv.r ?? ''}" placeholder="${e.reps || 0}"></td>
             </tr>`;
           }).join('')}
         </table>
         <button class="btn save">${saved?.done ? 'Обновить результат' : 'Отметить выполненным'}</button>
+        ${saved?.done ? '<button class="btn ghost und">Снять отметку</button>' : ''}
         ${saved ? `<div class="hist"><b>Последняя запись:</b><div>${formatSets(saved.sets)} · ${new Date(saved.date).toLocaleDateString('ru')}</div>
           ${saved.hist?.length ? `<b>Предыдущие:</b>${saved.hist.slice(0, 4).map(h =>
             `<div>${formatSets(h.sets)} · ${new Date(h.date).toLocaleDateString('ru')}</div>`).join('')}` : ''}</div>` : ''}
@@ -455,8 +462,18 @@ async function viewWorkout(s) {
       tg?.HapticFeedback?.notificationOccurred('success');
       toast('Сохранено');
       await render();
-      // автопереход: раскрываем следующее упражнение
-      $app.querySelectorAll('.card.ex')[i + 1]?.classList.add('open');
+      // автопереход: раскрываем следующее упражнение и подвозим к нему
+      const next = $app.querySelectorAll('.card.ex')[i + 1];
+      next?.classList.add('open');
+      next?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    };
+    // «Снять отметку» — отмена случайного выполнения
+    const und = el.querySelector('.und');
+    if (und) und.onclick = async () => {
+      und.disabled = true;
+      await api('/api/log', { method: 'POST', body: JSON.stringify({ exerciseId: e.id, sets: saved.sets, done: false }) });
+      tg?.HapticFeedback?.impactOccurred('light');
+      render();
     };
     $app.appendChild(el);
   });
@@ -556,14 +573,17 @@ async function viewProfile() {
   };
 }
 
-// SVG-график изменения веса
+// SVG-график изменения веса (x — по реальным датам, не по индексам)
 function chartHtml(weights) {
   const W = 320, H = 160, PL = 38, PR = 12, PT = 16, PB = 24;
   const ws = weights.map(x => x.w);
   const pad = ws.length > 1 ? Math.max(0.5, (Math.max(...ws) - Math.min(...ws)) * 0.15) : 1;
   const min = Math.min(...ws) - pad, max = Math.max(...ws) + pad;
   const n = weights.length;
-  const x = i => n === 1 ? (PL + W - PR) / 2 : PL + (i * (W - PL - PR)) / (n - 1);
+  const d0 = Date.parse(weights[0].d), d1 = Date.parse(weights[n - 1].d);
+  const x = i => (n === 1 || d1 === d0)
+    ? (PL + W - PR) / 2
+    : PL + ((Date.parse(weights[i].d) - d0) / (d1 - d0)) * (W - PL - PR);
   const y = w => PT + ((max - w) * (H - PT - PB)) / (max - min);
 
   const grid = [min + pad, max - pad].map(v =>
@@ -571,9 +591,13 @@ function chartHtml(weights) {
      <text x="${PL - 6}" y="${y(v) + 4}" class="lbl" text-anchor="end">${+v.toFixed(1)}</text>`).join('');
 
   const pts = weights.map((p, i) => `${x(i).toFixed(1)},${y(p.w).toFixed(1)}`).join(' ');
+  // подписи дат прореживаем — иначе при 15+ точках налезают друг на друга
+  const lblStep = Math.ceil(n / 7);
   const dots = weights.map((p, i) =>
-    `<circle cx="${x(i)}" cy="${y(p.w)}" r="3.5" class="dot"/>
-     <text x="${x(i)}" y="${H - 6}" class="lbl" text-anchor="middle">${fmtShort(p.d)}</text>`).join('');
+    `<circle cx="${x(i)}" cy="${y(p.w)}" r="3.5" class="dot"/>` +
+    (i % lblStep === 0 || i === n - 1
+      ? `<text x="${x(i)}" y="${H - 6}" class="lbl" text-anchor="middle">${fmtShort(p.d)}</text>` : '')
+  ).join('');
 
   // значения веса у первой и последней точки
   const valAt = i =>
@@ -600,7 +624,8 @@ function videoHtml(url) {
 }
 
 function formatSets(sets) {
-  return (sets || []).map(s => `${s.w}×${s.r}`).join(' · ');
+  // «—×12» для упражнений со своим весом вместо «0×12»
+  return (sets || []).map(s => `${s.w || '—'}×${s.r}`).join(' · ');
 }
 
 // ---------- render ----------
@@ -610,13 +635,20 @@ async function render() {
   // системная кнопка «назад» Telegram на вложенных экранах
   if (tg?.BackButton) stack.length > 1 ? tg.BackButton.show() : tg.BackButton.hide();
   const s = stack[stack.length - 1];
-  if (s.view === 'programs') await viewPrograms();
-  else if (s.view === 'program') await viewProgram(s);
-  else if (s.view === 'week') await viewWeek(s);
-  else if (s.view === 'workout') await viewWorkout(s);
-  else if (s.view === 'menus') await viewMenus();
-  else if (s.view === 'menu') await viewMenu(s);
-  else if (s.view === 'profile') await viewProfile();
+  try {
+    if (s.view === 'programs') await viewPrograms();
+    else if (s.view === 'program') await viewProgram(s);
+    else if (s.view === 'week') await viewWeek(s);
+    else if (s.view === 'workout') await viewWorkout(s);
+    else if (s.view === 'menus') await viewMenus();
+    else if (s.view === 'menu') await viewMenu(s);
+    else if (s.view === 'profile') await viewProfile();
+  } catch (err) {
+    console.error(err);
+    $app.innerHTML = `<div class="empty">Не удалось загрузить данные — проверь соединение.</div>
+      <button class="btn" id="retry">Повторить</button>`;
+    $app.querySelector('#retry').onclick = () => render();
+  }
   window.scrollTo(0, s.scroll || 0); // возвращаемся туда, где остановились
 }
 

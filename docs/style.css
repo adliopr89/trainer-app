@@ -243,3 +243,10 @@ input[type="date"] { color-scheme: dark; }
   opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
 }
 #toast.show { opacity: 1; transform: translateX(-50%); }
+
+/* имя и аватарка в шапке тоже ведут в профиль */
+.h-name, .h-ava { cursor: pointer; }
+
+/* «Снять отметку» под кнопкой сохранения */
+.btn.und { margin-top: 8px; margin-bottom: 0; font-size: 13px; padding: 9px; }
+.btn:disabled { opacity: .5; }
