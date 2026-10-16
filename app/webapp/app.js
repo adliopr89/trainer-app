@@ -10,7 +10,10 @@ tg?.BackButton?.onClick(() => back());
 function applyTheme() {
   const hex = tg?.themeParams?.bg_color;
   const n = hex && parseInt(hex.slice(1), 16);
-  const light = !!n && (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255 > 0.6;
+  const tgLight = !!n && (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255 > 0.6;
+  // ручной выбор в профиле (auto/dark/light) имеет приоритет над темой ТГ
+  const pref = ls.get('theme', 'auto');
+  const light = pref === 'light' || (pref === 'auto' && tgLight);
   const vars = light
     ? { '--bg': '#f6f4f5', '--text': '#1e1a1c', '--hint': '#8a8188', '--card': '#ffffff', '--line': '#e8e2e6', '--pink-dim': '#ffe3ec', '--pink-soft': '#e0447a' }
     : { '--bg': '#0a090b', '--text': '#ece7ea', '--hint': '#9a9199', '--card': '#141114', '--line': '#241d22', '--pink-dim': '#3d1523', '--pink-soft': '#ff8fab' };
@@ -21,8 +24,6 @@ function applyTheme() {
   tg?.setHeaderColor?.(bg);
   tg?.setBackgroundColor?.(bg);
 }
-applyTheme();
-tg?.onEvent?.('themeChanged', applyTheme);
 
 // При открытой клавиатуре инпут мог уехать под шапку/край — доводим до центра экрана
 document.addEventListener('focusin', e => {
@@ -130,6 +131,10 @@ function localApi(path, opts = {}) {
 
 const api = window.APP_DATA ? localApi : fetchApi;
 
+// тема: читаем выбор из localStorage (ls уже объявлен), следим за сменой темы ТГ
+applyTheme();
+tg?.onEvent?.('themeChanged', applyTheme);
+
 // --- Профиль пользователя (localStorage; серверная БД клиентов — этап 2) ---
 const getProfile = () => ls.get('profile', null);
 
@@ -199,14 +204,12 @@ function renderHead() {
   const initial = (esc(p.name.trim()[0] || '?')).toUpperCase();
   $head.innerHTML = `
     <button class="h-pack">${pack.emoji} ${pack.title}<span> · ${leftTxt}</span></button>
-    <button class="h-prof">Профиль</button>
     <div class="h-name">${esc(p.name)}, ${p.age}</div>
     <div class="h-weight">${last ? last.w : '—'}<small> кг</small></div>
     <div class="h-ava">${ava ? `<img src="${ava}" alt="" width="42" height="42">` : initial}</div>`;
   const toProfile = () => { tab = 'profile'; stack = [{ view: 'profile' }]; render(); };
   $head.querySelector('.h-pack').onclick = toProfile;
-  $head.querySelector('.h-prof').onclick = toProfile;
-  $head.querySelector('.h-name').onclick = toProfile; // имя и аватарка тоже ведут в профиль
+  $head.querySelector('.h-name').onclick = toProfile; // имя и аватарка — переход в профиль
   $head.querySelector('.h-ava').onclick = toProfile;
 }
 
@@ -542,7 +545,18 @@ async function viewProfile() {
       <label>Возраст<input id="p-age" type="number" inputmode="numeric" min="14" max="99" value="${p.age}"></label>
       <div class="err" id="e-page"></div>
       <button class="btn" id="p-save">Сохранить</button>
-    </div>`;
+    </div>
+    <div class="s" style="margin:14px 0 6px">Тема</div>
+    <div class="frow" id="t-chips"></div>`;
+  // выбор темы: авто = следует за Telegram, тёмная/светлая — принудительно
+  const cur = ls.get('theme', 'auto');
+  for (const [id, t] of [['auto', 'Авто'], ['dark', 'Тёмная'], ['light', 'Светлая']]) {
+    const b = document.createElement('button');
+    b.className = 'chip' + (cur === id ? ' active' : '');
+    b.textContent = t;
+    b.onclick = () => { ls.set('theme', id); applyTheme(); render(); };
+    $app.querySelector('#t-chips').appendChild(b);
+  }
   $app.querySelector('#p-toggle').onclick = () => {
     pFormOpen = !pFormOpen;
     $app.querySelector('#p-form').style.display = pFormOpen ? '' : 'none';

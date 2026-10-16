@@ -36,14 +36,9 @@ body.nohead { padding-top: 0; }
   padding: 6px 0; white-space: nowrap; flex-shrink: 0;
 }
 .h-pack span { color: var(--hint); font-size: 13px; font-weight: 600; }
-.h-prof {
-  background: none; border: none; cursor: pointer;
-  color: var(--pink); font-size: 15px; font-weight: 600;
-  padding: 6px 0; white-space: nowrap; flex-shrink: 0;
-}
 .h-name {
   flex: 1; min-width: 0; text-align: right;
-  color: var(--hint); font-size: 14px;
+  color: var(--pink); font-size: 15px; font-weight: 600;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .h-weight {

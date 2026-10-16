@@ -8,13 +8,8 @@ const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const ACCOUNTS_FILE = path.join(DATA_DIR, 'accounts.json');
 
 // --- Заглушки программ: 2 программы по 4 недели ---
-// Каждая неделя — 7 слотов по дням недели (1=Пн … 7=Вс).
+// Неделя = weekPlan[N] занятий, каждое — список упражнений из пула.
 // Когда тренер даст реальный контент — заменим этот блок загрузкой из JSON/БД.
-const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-const WEEKDAYS_FULL = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
-
-const MONTHS_RU = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
 
 const WORKOUT_TITLES = {
   power: ['Ноги и ягодицы', 'Верх тела', 'Всё тело', 'Кор и спина', 'Силовая', 'Лёгкая'],
@@ -217,10 +212,6 @@ function weekOpensIn(startISO, num) {
   return Math.max(0, Math.ceil((start + (num - 1) * 7 * 864e5 - Date.now()) / 864e5));
 }
 
-function currentMonthName() {
-  return MONTHS_RU[new Date().getMonth()];
-}
-
 function getProgram(programId) {
   return PROGRAMS.find(p => p.id === programId);
 }
@@ -238,7 +229,7 @@ function findWorkout(workoutId) {
 }
 
 module.exports = {
-  WEEKDAYS, WEEKDAYS_FULL, MONTHS_RU, PROGRAMS, MENUS, GROUPS,
+  PROGRAMS, MENUS, GROUPS,
   getProgram, getMenu, findWorkout, getUser, saveLog, getUserLogs,
-  saveAccount, getAccount, currentWeekNum, weekOpensIn, currentMonthName,
+  saveAccount, getAccount, currentWeekNum, weekOpensIn,
 };

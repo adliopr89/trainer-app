@@ -3,15 +3,12 @@
 // Запуск: node server/build-static.js
 const fs = require('fs');
 const path = require('path');
-const { WEEKDAYS, WEEKDAYS_FULL, MONTHS_RU, PROGRAMS, MENUS, GROUPS } = require('./db');
+const { PROGRAMS, MENUS, GROUPS } = require('./db');
 
 const OUT = path.join(__dirname, '..', '..', 'docs');
 fs.mkdirSync(OUT, { recursive: true });
 
 const data = {
-  weekdays: WEEKDAYS,
-  weekdaysFull: WEEKDAYS_FULL,
-  months: MONTHS_RU,
   programs: PROGRAMS,
   menus: MENUS,
   groups: GROUPS,

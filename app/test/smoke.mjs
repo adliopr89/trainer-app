@@ -138,9 +138,10 @@ try {
   await check('отметка снята', `!document.querySelectorAll('.card.ex')[0].querySelector('.badge.done')`, true);
 
   console.log('Профиль:');
-  await ev(`document.querySelector('.h-pack').click()`);
+  await check('кнопки «Профиль» в шапке нет', `!document.querySelector('.h-prof')`, true);
+  await ev(`document.querySelector('.h-name').click()`);
   await waitFor(`!!document.querySelector('.chart')`);
-  await check('клик по пакету → профиль, график есть', `!!document.querySelector('.chart')`, true);
+  await check('клик по имени → профиль, график есть', `!!document.querySelector('.chart')`, true);
   await check('метки значений на графике', `document.querySelectorAll('.lbl.val').length >= 1`, true);
   await ev(`document.querySelector('#w-toggle').click()`);
   await ev(`
@@ -184,6 +185,14 @@ try {
   `);
   await waitFor(`document.querySelector('.h-name').textContent.includes('Новое Имя, 31')`);
   await check('имя и возраст обновились в шапке', `document.querySelector('.h-name').textContent.includes('Новое Имя, 31')`, true);
+  // переключение темы
+  await check('есть чипы темы', `document.querySelectorAll('#t-chips .chip').length`, 3);
+  await ev(`[...document.querySelectorAll('#t-chips .chip')].find(c => c.textContent === 'Светлая').click()`);
+  await sleep(300);
+  await check('светлая тема применилась', `getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()`, '#f6f4f5');
+  await ev(`[...document.querySelectorAll('#t-chips .chip')].find(c => c.textContent === 'Тёмная').click()`);
+  await sleep(300);
+  await check('тёмная тема вернулась', `getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()`, '#0a090b');
 
   console.log('Питание:');
   await ev(`[...document.querySelectorAll('#tabs button')].find(b => b.textContent === 'Питание').click()`);

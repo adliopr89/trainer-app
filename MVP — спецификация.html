@@ -178,7 +178,7 @@
 <h2><span class="num">Т</span>Технические детали (Telegram-интеграция)</h2>
 <ul>
   <li><code>setHeaderColor</code> / <code>setBackgroundColor</code> под фон приложения.</li>
-  <li><b>Светлая тема:</b> светлый <code>themeParams.bg_color</code> → светлая палитра (розовый акцент сохраняется).</li>
+  <li><b>Темы: тёмная и светлая</b> — переключатель в профиле («Авто» следует за темой ТГ, ручной выбор имеет приоритет).</li>
   <li><code>BackButton</code> Telegram на вложенных экранах + <code>enableClosingConfirmation</code> + <code>disableVerticalSwipes</code>.</li>
   <li><b>Валидация <code>initData</code></b> на сервере (HMAC-SHA256 по BOT_TOKEN, <code>auth_date</code> не старше суток); в деве без токена отключена.</li>
   <li>localStorage-ключи привязаны к <code>tg_id</code>; пользовательский ввод экранируется при выводе (<code>esc()</code>).</li>
@@ -187,7 +187,7 @@
   <li>Ошибка загрузки → «Не удалось загрузить» + «Повторить». График веса: X по реальным датам, подписи прорежены при 15+ точках.</li>
   <li><b>Антикэш:</b> <code>build-static.js</code> инжектит <code>?v=&lt;build&gt;</code> в ссылки на ассеты.</li>
   <li>Программа на 100% помечена «🏁 пройдена». В серверном режиме <code>data.js</code> не подключается (тег инжектится при сборке).</li>
-  <li><b>e2e:</b> <code>node app/test/smoke.mjs</code> — 41 проверка в отладочном Chrome (:9222).</li>
+  <li><b>e2e:</b> <code>node app/test/smoke.mjs</code> — 45 проверок в отладочном Chrome (:9222).</li>
 </ul>
 
 <h2 id="s5"><span class="num">5</span>Экраны</h2>
@@ -234,7 +234,7 @@ logs           — user_id, exercise_id, дата,
 <p>Запуск для разработки:</p>
 <pre><code>node server/index.js          # бот + API + webapp (нужен .env)
 node server/build-static.js   # статическая сборка → docs/
-node app/test/smoke.mjs       # e2e: 41 проверка в отладочном Chrome</code></pre>
+node app/test/smoke.mjs       # e2e: 45 проверок в отладочном Chrome</code></pre>
 
 <h2 id="s8"><span class="num">8</span>Открытые вопросы</h2>
 <ul class="check">
