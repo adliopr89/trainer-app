@@ -36,8 +36,8 @@
 - [x] Стек бота: **Node.js** — grammY + Express. Фронт MVP — ванильный JS (без сборки), React позже при необходимости.
 - [x] Mini App: Telegram Web Apps API, стили под нативную тему ТГ (CSS-переменные tg-theme).
 - [x] Бэкенд MVP: **статический режим** — фронт работает без сервера: данные зашиты в `docs/data.js`, логи весов в localStorage. Express+JSON (`app/server/`) оставлен как будущий API.
-- [x] Публикация: **GitHub Pages** — `https://adliopr89.github.io/trainer-app/` (репо `adliopr89/trainer-app`, публикуется папка `docs/` с ветки main). Постоянный адрес, без заглушек, не зависит от ПК пользователя.
-  - Workflow: правим `server/db.js` (данные) и `webapp/` (UI) → `node server/build-static.js` → `git add -A && git commit && git push` → Pages подхватывает за ~1 мин.
+- [x] Публикация: **GitHub Pages** — `https://adliopr89.github.io/trainer-app/` (репо `adliopr89/trainer-app`, git-root = корень проекта `Онлайн тренер/`, публикуется корневая папка `docs/` с ветки main). Постоянный адрес, без заглушек, не зависит от ПК пользователя.
+  - Workflow: правим `app/server/db.js` (данные) и `app/webapp/` (UI) → `node app/server/build-static.js` (собирает в корневой `docs/`) → `git add -A && git commit && git push` → Pages подхватывает за ~1 мин.
   - `webapp/app.js` имеет два режима: `window.APP_DATA` есть → localStorage-режим (GitHub Pages); нет → fetch к API (`server/index.js`, :3000).
   - Меню-ботонка `setChatMenuButton` уже указывает на Pages-адрес; `/start` в боте ходит через `WEBAPP_URL` в `.env`.
   - Не работает из сети РФ: Cloudflare tunnel (7844 blocked), Tailscale Funnel (edge IP рвутся ТСПУ), ngrok free (заглушка «Visit Site» не жмётся в вебвью ТГ). Туннели больше не нужны.
