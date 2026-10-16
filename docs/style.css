@@ -245,3 +245,15 @@ input[type="date"] { color-scheme: dark; }
 /* «Снять отметку» под кнопкой сохранения */
 .btn.und { margin-top: 8px; margin-bottom: 0; font-size: 13px; padding: 9px; }
 .btn:disabled { opacity: .5; }
+
+/* ачивки в профиле */
+.ach-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+.ach {
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+  padding: 10px 6px; text-align: center;
+}
+.ach:not(.on) { opacity: .35; filter: grayscale(1); }
+.ach.on { border-color: var(--pink-dim); }
+.ach-e { font-size: 24px; line-height: 1.2; }
+.ach-t { font-size: 11px; font-weight: 700; margin-top: 4px; }
+.ach-d { font-size: 10px; color: var(--hint); margin-top: 2px; line-height: 1.3; }

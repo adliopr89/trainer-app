@@ -228,8 +228,29 @@ function findWorkout(workoutId) {
   return null;
 }
 
+// Агрегированная статистика по логам для ачивок:
+// выполненные упражнения / целые занятия / целые недели / целые программы
+function statsFromLogs(logs, programs = PROGRAMS) {
+  const s = { doneEx: 0, doneWorkouts: 0, doneWeeks: 0, donePrograms: 0 };
+  for (const p of programs) {
+    let pDone = 0, pTotal = 0;
+    for (const w of p.weeks) {
+      let wDone = 0, wTotal = 0;
+      for (const wo of w.workouts) {
+        const d = wo.exercises.filter(e => logs[e.id]?.done).length;
+        s.doneEx += d; wDone += d; pDone += d;
+        wTotal += wo.exercises.length; pTotal += wo.exercises.length;
+        if (wo.exercises.length && d === wo.exercises.length) s.doneWorkouts++;
+      }
+      if (wTotal && wDone === wTotal) s.doneWeeks++;
+    }
+    if (pTotal && pDone === pTotal) s.donePrograms++;
+  }
+  return s;
+}
+
 module.exports = {
   PROGRAMS, MENUS, GROUPS,
   getProgram, getMenu, findWorkout, getUser, saveLog, getUserLogs,
-  saveAccount, getAccount, currentWeekNum, weekOpensIn,
+  saveAccount, getAccount, currentWeekNum, weekOpensIn, statsFromLogs,
 };

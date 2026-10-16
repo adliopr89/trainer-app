@@ -55,6 +55,11 @@ app.get('/api/programs', (req, res) => {
 
 app.get('/api/groups', (req, res) => res.json(db.GROUPS));
 
+// Агрегаты по логам для ачивок в профиле
+app.get('/api/stats', (req, res) => {
+  res.json(db.statsFromLogs(db.getUserLogs(tgUserId(req))));
+});
+
 // Регистрация входа в Mini App: пишем аккаунт в базу (accounts.json)
 app.post('/api/me', (req, res) => {
   const u = tgUser(req);

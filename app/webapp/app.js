@@ -76,6 +76,25 @@ function localApi(path, opts = {}) {
   if (path === '/api/groups') {
     return Promise.resolve(D.groups);
   }
+  if (path === '/api/stats') {
+    // агрегаты по логам для ачивок (зеркало db.statsFromLogs)
+    const s = { doneEx: 0, doneWorkouts: 0, doneWeeks: 0, donePrograms: 0 };
+    for (const p of D.programs) {
+      let pDone = 0, pTotal = 0;
+      for (const w of p.weeks) {
+        let wDone = 0, wTotal = 0;
+        for (const wo of w.workouts) {
+          const d = wo.exercises.filter(e => logs[e.id]?.done).length;
+          s.doneEx += d; wDone += d; pDone += d;
+          wTotal += wo.exercises.length; pTotal += wo.exercises.length;
+          if (wo.exercises.length && d === wo.exercises.length) s.doneWorkouts++;
+        }
+        if (wTotal && wDone === wTotal) s.doneWeeks++;
+      }
+      if (pTotal && pDone === pTotal) s.donePrograms++;
+    }
+    return Promise.resolve(s);
+  }
   if (path === '/api/menus') {
     return Promise.resolve(D.menus.map(m => ({ id: m.id, title: m.title, desc: m.desc, kbju: m.kbju })));
   }
@@ -280,6 +299,7 @@ function viewOnboarding() {
       weights: [{ d: today, w }],
       pack: { id: 'start', until: new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10) },
     });
+    checkUnlocks(); // 🌱 «Первый шаг»
     tg?.HapticFeedback?.notificationOccurred('success');
     $tabs.style.display = '';
     document.body.classList.remove('nohead');
@@ -465,6 +485,7 @@ async function viewWorkout(s) {
       await api('/api/log', { method: 'POST', body: JSON.stringify({ exerciseId: e.id, sets, done: true }) });
       tg?.HapticFeedback?.notificationOccurred('success');
       toast('Сохранено');
+      checkUnlocks();
       await render();
       // автопереход: раскрываем следующее упражнение и подвозим к нему
       const next = $app.querySelectorAll('.card.ex')[i + 1];
@@ -500,6 +521,9 @@ async function viewMenus() {
 async function viewMenu(s) {
   $app.innerHTML = '<div class="empty">Загрузка…</div>';
   const m = await api(`/api/menus/${s.id}`);
+  const had = ls.get('menuSeen');
+  ls.set('menuSeen', true); // для ачивки «Заглянула в питание»
+  if (!had) checkUnlocks();
   $app.innerHTML = `<button class="back">‹ Назад</button>
     <h1 class="page">${m.title}</h1>
     <div class="lead">${m.desc}${m.kbju ? ` · ${m.kbju}` : ''}</div>`;
@@ -510,6 +534,49 @@ async function viewMenu(s) {
     el.innerHTML = `<div class="t">${meal.name}${meal.kcal ? `<span class="kcal"> ~${meal.kcal} ккал</span>` : ''}</div><div class="s">${meal.dish}</div>`;
     $app.appendChild(el);
   }
+}
+
+// ---------- Ачивки ----------
+// Условия считаются от того, что уже есть в данных: записи веса, выполненные
+// упражнения/занятия/недели/программы, дни с регистрации, открытие меню, пакет.
+const ACHIEVES = [
+  { id: 'start',   e: '🌱', t: 'Первый шаг',       d: 'Профиль заполнен',              c: x => true },
+  { id: 'w1',      e: '⚖️', t: 'На весах',         d: 'Добавила запись веса',          c: x => x.weights.length > 1 },
+  { id: 'w5',      e: '📈', t: 'Динамика',         d: '5 записей веса',                c: x => x.weights.length >= 5 },
+  { id: 'w2kg',    e: '🎯', t: 'Движение есть',    d: 'Вес изменился на 2+ кг',        c: x => x.dW >= 2 },
+  { id: 'tr1',     e: '💪', t: 'Первая тренировка', d: 'Первое занятие целиком',       c: x => x.doneWorkouts >= 1 },
+  { id: 'tr3',     e: '🔥', t: 'Разогрелась',      d: '3 занятия целиком',             c: x => x.doneWorkouts >= 3 },
+  { id: 'ex10',    e: '🏅', t: 'Десятка',          d: '10 выполненных упражнений',     c: x => x.doneEx >= 10 },
+  { id: 'week',    e: '🏋️', t: 'Неделя закрыта',   d: 'Все занятия недели выполнены',  c: x => x.doneWeeks >= 1 },
+  { id: 'prog',    e: '🏁', t: 'Программа пройдена', d: '100% упражнений программы',   c: x => x.donePrograms >= 1 },
+  { id: 'menu',    e: '🍽️', t: 'Вкусно и точка',   d: 'Заглянула в питание',           c: x => x.menuSeen },
+  { id: 'week7',   e: '📅', t: 'Неделя с нами',    d: '7 дней после регистрации',      c: x => x.days >= 7 },
+  { id: 'vip',     e: '👑', t: 'VIP',              d: 'Активен VIP-пакет',             c: x => x.packId === 'vip' },
+];
+
+async function evalAchieves() {
+  const stats = await api('/api/stats');
+  const p = getProfile();
+  const ctx = {
+    ...stats,
+    weights: p?.weights || [],
+    dW: p?.weights?.length > 1
+      ? Math.abs(p.weights[p.weights.length - 1].w - p.weights[0].w) : 0,
+    days: p ? Math.max(0, Math.floor((Date.now() - Date.parse(p.since)) / 864e5)) : 0,
+    packId: p && !getPack(p).expired ? p.pack.id : null,
+    menuSeen: !!ls.get('menuSeen'),
+  };
+  return ACHIEVES.map(a => ({ ...a, on: !!p && !!a.c(ctx) }));
+}
+
+// Тост при новой разблокировке; открытые храним в ls('ach'), чтобы не спамить
+async function checkUnlocks() {
+  if (!getProfile()) return;
+  const got = new Set(ls.get('ach', []));
+  const fresh = (await evalAchieves()).filter(a => a.on && !got.has(a.id));
+  if (!fresh.length) return;
+  ls.set('ach', [...got, ...fresh.map(a => a.id)]);
+  toast(`${fresh[0].e} Ачивка: ${fresh[0].t}${fresh.length > 1 ? ` и ещё ${fresh.length - 1}` : ''}`);
 }
 
 // ---------- Мой профиль ----------
@@ -547,7 +614,9 @@ async function viewProfile() {
       <button class="btn" id="p-save">Сохранить</button>
     </div>
     <div class="s" style="margin:14px 0 6px">Тема</div>
-    <div class="frow" id="t-chips"></div>`;
+    <div class="frow" id="t-chips"></div>
+    <h2 class="sec">Достижения <span id="ach-count"></span></h2>
+    <div class="ach-grid" id="ach-grid"></div>`;
   // выбор темы: авто = следует за Telegram, тёмная/светлая — принудительно
   const cur = ls.get('theme', 'auto');
   for (const [id, t] of [['auto', 'Авто'], ['dark', 'Тёмная'], ['light', 'Светлая']]) {
@@ -556,6 +625,16 @@ async function viewProfile() {
     b.textContent = t;
     b.onclick = () => { ls.set('theme', id); applyTheme(); render(); };
     $app.querySelector('#t-chips').appendChild(b);
+  }
+  // сетка ачивок: открытые цветные, закрытые — приглушённые с условием
+  const ach = await evalAchieves();
+  const $ag = $app.querySelector('#ach-grid');
+  $app.querySelector('#ach-count').textContent = `· ${ach.filter(a => a.on).length}/${ach.length}`;
+  for (const a of ach) {
+    const el = document.createElement('div');
+    el.className = 'ach' + (a.on ? ' on' : '');
+    el.innerHTML = `<div class="ach-e">${a.e}</div><div class="ach-t">${a.t}</div><div class="ach-d">${a.d}</div>`;
+    $ag.appendChild(el);
   }
   $app.querySelector('#p-toggle').onclick = () => {
     pFormOpen = !pFormOpen;
@@ -614,6 +693,7 @@ async function viewProfile() {
     saveWeight(w, d);
     tg?.HapticFeedback?.notificationOccurred('success');
     toast('Сохранено');
+    checkUnlocks();
     renderHead();
     render();
   };

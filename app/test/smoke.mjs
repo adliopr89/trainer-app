@@ -193,6 +193,11 @@ try {
   await ev(`[...document.querySelectorAll('#t-chips .chip')].find(c => c.textContent === 'Тёмная').click()`);
   await sleep(300);
   await check('тёмная тема вернулась', `getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()`, '#0a090b');
+  // ачивки: сетка есть, часть открыта (стартовая + веса + счётчик)
+  await check('сетка ачивок — 12 штук', `document.querySelectorAll('.ach').length`, 12);
+  await check('ачивка «Первый шаг» открыта', `[...document.querySelectorAll('.ach.on')].some(a => a.textContent.includes('Первый шаг'))`, true);
+  await check('закрытые ачивки приглушены', `document.querySelectorAll('.ach:not(.on)').length > 0`, true);
+  await check('счётчик n/12', `document.querySelector('#ach-count').textContent.match(/\\d+\\/12/) !== null`, true);
 
   console.log('Питание:');
   await ev(`[...document.querySelectorAll('#tabs button')].find(b => b.textContent === 'Питание').click()`);
@@ -206,6 +211,10 @@ try {
   await ev(`document.querySelector('.back').click()`);
   await sleep(400);
   await check('вернулись в список меню', `document.querySelectorAll('.card').length`, 3);
+  // ачивка «Вкусно и точка» за открытие меню
+  await ev(`document.querySelector('.h-name').click()`);
+  await waitFor(`!!document.querySelector('#ach-grid')`);
+  await check('ачивка за просмотр меню', `[...document.querySelectorAll('.ach.on')].some(a => a.textContent.includes('Вкусно и точка'))`, true);
 
   console.log('Истёкший пакет:');
   await ev(`
