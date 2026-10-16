@@ -3,17 +3,18 @@
 // Запуск: node server/build-static.js
 const fs = require('fs');
 const path = require('path');
-const { LEVELS, WEEKDAYS, WEEKDAYS_FULL, MONTHS_RU, PROGRAMS } = require('./db');
+const { WEEKDAYS, WEEKDAYS_FULL, MONTHS_RU, PROGRAMS, MENUS, GROUPS } = require('./db');
 
 const OUT = path.join(__dirname, '..', '..', 'docs');
 fs.mkdirSync(OUT, { recursive: true });
 
 const data = {
-  levels: LEVELS,
   weekdays: WEEKDAYS,
   weekdaysFull: WEEKDAYS_FULL,
   months: MONTHS_RU,
   programs: PROGRAMS,
+  menus: MENUS,
+  groups: GROUPS,
 };
 
 fs.writeFileSync(path.join(OUT, 'data.js'), 'window.APP_DATA=' + JSON.stringify(data) + ';');

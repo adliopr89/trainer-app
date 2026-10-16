@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Онлайн тренер — MVP спецификация Mini App</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: #f6f7f9;
+    color: #1e2430;
+    line-height: 1.6;
+    padding: 40px 20px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  h1 { font-size: 2rem; margin-bottom: 8px; }
+  .sub { color: #5b6472; margin-bottom: 12px; }
+  .meta { color: #8a93a3; font-size: .85rem; margin-bottom: 40px; }
+  h2 {
+    font-size: 1.3rem;
+    margin: 48px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #dde1e8;
+  }
+  h2 .num {
+    display: inline-block;
+    background: #4f7cff;
+    color: #fff;
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    text-align: center;
+    line-height: 30px;
+    font-size: .95rem;
+    margin-right: 10px;
+  }
+  h3 { font-size: 1rem; margin: 20px 0 8px; color: #37404f; }
+  p { margin-bottom: 10px; }
+  ul { padding-left: 22px; }
+  li { margin-bottom: 7px; }
+  .card {
+    background: #ffffff;
+    border: 1px solid #e2e6ec;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+  }
+  .card b { color: #2f5fd8; }
+  .note {
+    background: #edf2fe;
+    border: 1px solid #ccdaF8;
+    border-left: 3px solid #4f7cff;
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    color: #26406e;
+  }
+  .warn {
+    background: #fdf3e4;
+    border: 1px solid #f0ddba;
+    border-left: 3px solid #e8a33d;
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    color: #6b4d1c;
+  }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: .92rem; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid #e2e6ec; }
+  th { color: #5b6472; font-weight: 600; font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; }
+  .toc { background: #ffffff; border: 1px solid #e2e6ec; border-radius: 12px; padding: 18px 22px; margin-bottom: 36px; }
+  .toc a { color: #2f5fd8; text-decoration: none; display: block; padding: 3px 0; }
+  .toc a:hover { text-decoration: underline; }
+  code { background: #eef0f4; padding: 1px 6px; border-radius: 5px; font-size: .88em; }
+  pre {
+    background: #1e2430; color: #d8dee9;
+    border-radius: 10px; padding: 14px 18px;
+    font-size: .85rem; overflow-x: auto; margin: 12px 0;
+  }
+  pre code { background: none; padding: 0; color: inherit; }
+  .tag {
+    display: inline-block;
+    font-size: .72rem;
+    padding: 2px 10px;
+    border-radius: 20px;
+    margin-left: 8px;
+    vertical-align: middle;
+    font-weight: 600;
+  }
+  .tag.free { background: #dff5e6; color: #1a7a3a; }
+  .tag.later { background: #e8ebf0; color: #5b6472; }
+  .check { list-style: none; padding-left: 0; }
+  .check li { padding-left: 24px; position: relative; }
+  .check li::before { content: '☐'; position: absolute; left: 0; color: #4f7cff; }
+  .check li.done::before { content: '☑'; color: #1a7a3a; }
+  @media print {
+    body { background: #fff; padding: 20px 10px; }
+    h2 { break-after: avoid; }
+    .card, .warn, .note, table { break-inside: avoid; }
+    .toc a { color: #1e2430; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>MVP — спецификация Mini App</h1>
+<p class="sub">Онлайн тренер: Telegram-бот + мини-приложение с программами, питанием и профилем.</p>
+<p class="meta">Обновлено 16.10.2026 · бот с двумя кнопками, онбординг, новые табы (Программы / Питание / Мой профиль), график веса</p>
+
+<div class="toc">
+  <b style="color:#9aa0ad;font-size:.85rem">СОДЕРЖАНИЕ</b><br><br>
+  <a href="#s1">1. Бот</a>
+  <a href="#s2">2. Онбординг (первый вход)</a>
+  <a href="#s3">3. Структура приложения — нижние плашки</a>
+  <a href="#s4">4. Упражнение и трекинг</a>
+  <a href="#s5">5. Экраны</a>
+  <a href="#s6">6. Модель данных</a>
+  <a href="#s7">7. Чеклист запуска</a>
+  <a href="#s8">8. Открытые вопросы</a>
+</div>
+
+<h2 id="s1"><span class="num">1</span>Бот</h2>
+<p>На команду <code>/start</code> бот отвечает сообщением с <b>двумя кнопками</b>:</p>
+<div class="card"><b>«Оплатить»</b> — пока заглушка (ответ «скоро появится»). Дальше: Telegram Stars / Prodamus / YooKassa + выдача доступа.<span class="tag later">этап 2</span></div>
+<div class="card"><b>«Открыть приложение»</b> — открывает Mini App по адресу из <code>WEBAPP_URL</code>.</div>
+<p>Бот здоровается по имени (<code>ctx.from.first_name</code>).</p>
+<div class="note"><b>База аккаунтов</b> — <code>app/data/accounts.json</code> (в gitignore): при <code>/start</code> и при входе в Mini App (<code>POST /api/me</code>) пишется <code>tg_id → { user_name, first_name, created, seen }</code>. Полноценная БД клиентов — этап 2.</div>
+
+<h2 id="s2"><span class="num">2</span>Онбординг (первый вход в Mini App)</h2>
+<p>При первом открытии приложение просит заполнить:</p>
+<ul>
+  <li><b>Имя</b></li>
+  <li><b>Возраст</b></li>
+  <li><b>Вес, кг</b></li>
+</ul>
+<p>После сохранения показывается основной интерфейс. Вес из онбординга — первая точка в истории веса.</p>
+
+<h2 id="s3"><span class="num">3</span>Структура приложения — нижние плашки</h2>
+
+<h3>Таб 1 · Программы</h3>
+<ul>
+  <li>Список программ. Сейчас две: <b>«Крепкий орех»</b> (силовая, Опытный, 🥜+👑) и <b>«Хуяе как худею»</b> (жиросжигание, Новичок, все пакеты).</li>
+  <li>Карточка программы: название, <b>розовой строкой — уровень, пакеты, длительность в неделях</b>, описание, группа.</li>
+  <li>Фильтры сверху: чипы пакетов (Все / ⭐ Старт / 🥜 Уверенная / 👑 VIP) + чекбокс <b>«Доступное мне»</b>; чипы групп (Все / Формы / Похудение / Набор массы).</li>
+  <li>Программа не из пакета пользователя — серая с 🔒, по тапу не открывается.</li>
+  <li>Иерархия: <code>Программа → Неделя (1–4) → Занятия (1..N) → Упражнения</code>.</li>
+  <li><b>Все недели видны сразу</b> — на каждой число занятий и прогресс (неделя 1 = 4 занятия, неделя 2 = 5 …, настраивается <code>weekPlan</code> в <code>db.js</code>).</li>
+  <li><b>Неделя N открывается через 7·(N−1) дней от регистрации:</b> сегодня — неделя 1, через 7 дней — неделя 2 и т.д. Заблокированная показывает «Откроется через N дн.». Внутри открытой недели все занятия доступны сразу.</li>
+</ul>
+
+<h3>Таб 2 · Питание</h3>
+<ul>
+  <li>Список меню. Сейчас три заглушки: «Похудение · ~1500 ккал», «Поддержание · ~2000 ккал», «Набор массы · ~2500 ккал».</li>
+  <li>Внутри меню — приёмы пищи (завтрак / перекусы / обед / ужин) с блюдами.</li>
+  <li>Дальше: раздел может стать платным — кнопка «Разблокировать» → оплата.<span class="tag later">этап 2</span></li>
+</ul>
+
+<h3>Таб 3 · Мой профиль</h3>
+<ul>
+  <li><b>Закреплённая шапка на всех страницах</b> (одной строкой): <b>пакет + остаток срока</b> слева («⭐ Старт · 30 дн.» — нажатие ведёт в профиль), имя и возраст, <b>розовая плашка с текущим весом</b> (чёрный текст), <b>аватарка из Telegram</b> (<code>initDataUnsafe.user.photo_url</code>; если фото нет — круг с первой буквой имени).</li>
+  <li>Пакеты: ⭐ Старт, 🥜 Уверенная, 👑 VIP. Пока заглушка: при онбординге выдаётся «Старт» на 30 дней; после оплаты пакет и срок придут с сервера.<span class="tag later">этап 2</span></li>
+  <li>На вкладке — <b>график изменения веса</b> (SVG-линия по всем записям, без библиотек) со стартовым весом и дельтой.</li>
+  <li>Под графиком — кнопка <b>«Внести данные»</b>: открывает форму с выбором даты и полем веса. Одна запись на дату (повторная перезаписывает), записи хранятся по хронологии.</li>
+</ul>
+
+<h2 id="s4"><span class="num">4</span>Упражнение и трекинг</h2>
+<div class="card">
+  Карточка упражнения: название; <b>план</b> (подходы × повторы × вес); <b>видео техники</b>
+  (YouTube «по ссылке» или файл в Telegram); текст техники; поля <b>факта</b> — по каждому подходу вес + повторы.
+</div>
+<ul>
+  <li>Отметка «выполнено» на уровне упражнения; день закрыт, когда выполнены все упражнения.</li>
+  <li>Прогресс-бар на уровне дня / недели.</li>
+  <li>История: последняя запись по упражнению видна в карточке.</li>
+</ul>
+
+<h2 id="s5"><span class="num">5</span>Экраны</h2>
+<ul class="check">
+  <li class="done">Онбординг — имя / возраст / вес</li>
+  <li class="done">Таб «Программы» — фильтры (пакеты, «доступное мне», группы) + список</li>
+  <li class="done">Программа — все недели со статусами (текущая / готово / 🔒 + «откроется через N дн.»)</li>
+  <li class="done">Неделя — занятия 1..N со статусами (готово / частично)</li>
+  <li class="done">Занятие — упражнения-аккордеоны с планом и вводом факта</li>
+  <li class="done">Таб «Питание» — список меню → меню с приёмами пищи</li>
+  <li class="done">Таб «Мой профиль» — шапка с аватаркой + график веса + «Внести данные» (дата + вес)</li>
+</ul>
+
+<h2 id="s6"><span class="num">6</span>Модель данных (черновик)</h2>
+<pre><code>profile (localStorage) — имя, возраст, since (дата регистрации),
+                         weights[{дата, вес}], pack{ id, until }
+accounts (accounts.json) — tg_id → { user_name, first_name, created, seen }
+programs       — id, название, описание, уровень,
+                 packs[пакеты доступа], group(группа),
+                 weekPlan[занятий в каждой неделе]
+groups         — id, название
+weeks          — program_id, номер недели (1–4)
+workouts       — week_id, номер занятия, название
+exercises      — workout_id, название, порядок,
+                 план: подходы, повторы, вес, техника, видео
+menus          — id, название, описание, meals[{приём, блюдо}]
+logs           — user_id, exercise_id, дата,
+                 факт: подходы[{вес, повторы}], выполнено</code></pre>
+
+<h2 id="s7"><span class="num">7</span>Что нужно для запуска</h2>
+<ul class="check">
+  <li class="done">Бот в @BotFather — @pahs_trener_bot, токен в <code>app/.env</code></li>
+  <li class="done">Публикация — GitHub Pages (<code>docs/</code> собирается <code>build-static.js</code>)</li>
+  <li class="done">Привязка — <code>setChatMenuButton</code> открывает Mini App</li>
+  <li>Сервер 24/7 — когда включим оплату и БД клиентов (Render/Railway/VPS)</li>
+  <li>Оплата (этап 2) — Telegram Stars или Prodamus/YooKassa</li>
+  <li>БД клиентов (этап 2) — профили, доступы, оплаты (SQLite/Supabase)</li>
+  <li>Видео — YouTube «по ссылке» или Telegram file_id</li>
+  <li>Контент от тренера — реальные программы и меню + видео техники</li>
+</ul>
+
+<p>Запуск для разработки:</p>
+<pre><code>node server/index.js          # бот + API + webapp (нужен .env)
+node server/build-static.js   # статическая сборка → docs/</code></pre>
+
+<h2 id="s8"><span class="num">8</span>Открытые вопросы</h2>
+<ul class="check">
+  <li>Пейволл: что бесплатно на старте — программы целиком или часть недель?</li>
+  <li>Загрузка контента: админка в Mini App или напрямую в БД?</li>
+  <li>Замеры тела (объёмы) — добавить в профиль или отдельно?</li>
+  <li>Напоминания о тренировке через бота — этап 3.</li>
+</ul>
+
+</div>
+</body>
+</html>

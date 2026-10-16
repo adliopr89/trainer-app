@@ -5,54 +5,82 @@ const path = require('path');
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const LOGS_FILE = path.join(DATA_DIR, 'logs.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const ACCOUNTS_FILE = path.join(DATA_DIR, 'accounts.json');
 
-// --- Заглушки программ: 3 уровня, у каждого программа на 4 недели ---
+// --- Заглушки программ: 2 программы по 4 недели ---
 // Каждая неделя — 7 слотов по дням недели (1=Пн … 7=Вс).
 // Когда тренер даст реальный контент — заменим этот блок загрузкой из JSON/БД.
-const LEVELS = [
-  { id: 'beginner', title: 'Новичок' },
-  { id: 'intermediate', title: 'Опытный' },
-  { id: 'pro', title: 'Профи' },
-];
-
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 const WEEKDAYS_FULL = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
 
 const MONTHS_RU = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
   'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
 
-const DAY_TITLES = ['Ноги и ягодицы', 'Верх тела', 'Всё тело', 'Кардио и кор', 'Ноги и ягодицы', 'Верх тела', 'Лёгкая тренировка'];
+const WORKOUT_TITLES = {
+  power: ['Ноги и ягодицы', 'Верх тела', 'Всё тело', 'Кор и спина', 'Силовая', 'Лёгкая'],
+  burn: ['Кардио', 'Всё тело', 'Интервалы', 'Ноги и кор', 'Лёгкая', 'Кардио+'],
+};
+
+// Группы тренировок (фильтры на вкладке «Программы»)
+const GROUPS = [
+  { id: 'form', title: 'Формы' },
+  { id: 'burn', title: 'Похудение' },
+  { id: 'mass', title: 'Набор массы' },
+];
+
+// packs: в каких пакетах доступна программа (одна программа может быть в нескольких)
+const PROGRAMS_META = [
+  {
+    id: 'oreh',
+    title: 'Крепкий орех',
+    desc: 'Силовая программа: базовые движения, мышцы и рельеф',
+    level: 'Опытный',
+    packs: ['sure', 'vip'],
+    group: 'form',
+    pool: 'power',
+    weekPlan: [4, 5, 5, 6], // занятий в каждой неделе
+  },
+  {
+    id: 'hudeyu',
+    title: 'Хуяе как худею',
+    desc: 'Жиросжигание: больше повторов, меньше веса, короткий отдых',
+    level: 'Новичок',
+    packs: ['start', 'sure', 'vip'],
+    group: 'burn',
+    pool: 'burn',
+    weekPlan: [4, 5, 5, 6],
+  },
+];
+
 const EXERCISES_POOL = {
-  beginner: [
-    ['Приседания с собственным весом', 3, 12, 0, 'Стопы на ширине плеч, спина прямая. Опускайся до параллели бёдер с полом, колени не заваливаются внутрь.'],
-    ['Ягодичный мост', 3, 15, 0, 'Лёжа на спине, стопы на полу. Поднимай таз вверх, сжимая ягодицы в верхней точке на секунду.'],
-    ['Отжимания с колен', 3, 8, 0, 'Ладони под плечами, корпус прямой от колен до головы. Опускайся до касания грудью пола.'],
+  power: [
+    ['Приседания со штангой', 4, 8, 50, 'Гриф на верхней части трапеций. Вдох — вниз до параллели, выдох — вверх. Колени по направлению носков.'],
+    ['Становая тяга', 4, 6, 60, 'Гриф над серединой стопы, спина нейтральная. Тяни за счёт ног и ягодиц, гриф скользит вдоль голени.'],
+    ['Жим гантелей лёжа', 4, 8, 12, 'Лопатки сведены, гантели на уровне груди. Выжимай вверх без сведения рук в конце.'],
   ],
-  intermediate: [
-    ['Приседания со штангой', 3, 10, 40, 'Гриф на верхней части трапеций. Вдох — вниз до параллели, выдох — вверх. Колени по направлению носков.'],
-    ['Жим гантелей лёжа', 3, 10, 12, 'Лопатки сведены, гантели на уровне груди. Выжимай вверх без сведения рук в конце.'],
-    ['Тяга в наклоне', 3, 10, 30, 'Наклон ~45°, спина прямая. Тяни гриф к низу живота, локти вдоль корпуса.'],
-  ],
-  pro: [
-    ['Приседания со штангой', 4, 8, 70, 'Гриф на трапециях, полная амплитуда. Пауза в нижней точке, мощный выход без раскачки.'],
-    ['Становая тяга', 4, 6, 80, 'Гриф над серединой стопы, спина нейтральная. Тяни за счёт ног и ягодиц, гриф скользит вдоль голени.'],
-    ['Жим лёжа', 4, 8, 50, 'Лопатки сведены и опущены, прогиб естественный. Гриф к нижней части груди, выжим вверх-назад.'],
+  burn: [
+    ['Приседания с собственным весом', 4, 20, 0, 'Стопы на ширине плеч, спина прямая. Темп средний, без пауз вверху.'],
+    ['Выпады назад', 4, 15, 0, 'Шаг назад, колено задней ноги почти касается пола. Корпус вертикально, работаем поочерёдно.'],
+    ['Берпи', 3, 10, 0, 'Из упора лёжа — прыжок вверх с хлопком над головой. Отдых между подходами 60 секунд.'],
   ],
 };
 
 function buildPrograms() {
-  return LEVELS.map(level => ({
-    id: `${level.id}-m1`,
-    levelId: level.id,
-    title: 'Месяц 1 — Старт',
-    weeks: Array.from({ length: 4 }, (_, w) => ({
+  return PROGRAMS_META.map(meta => ({
+    id: meta.id,
+    title: meta.title,
+    desc: meta.desc,
+    level: meta.level,
+    packs: meta.packs,
+    group: meta.group,
+    weeks: meta.weekPlan.map((count, w) => ({
       num: w + 1,
-      workouts: DAY_TITLES.map((title, d) => ({
-        id: `${level.id}-w${w + 1}-d${d + 1}`,
-        weekday: d + 1, // 1=Пн … 7=Вс
-        title,
-        exercises: EXERCISES_POOL[level.id].map(([name, sets, reps, weight, tech], i) => ({
-          id: `${level.id}-w${w + 1}-d${d + 1}-e${i + 1}`,
+      workouts: Array.from({ length: count }, (_, s) => ({
+        id: `${meta.id}-w${w + 1}-s${s + 1}`,
+        num: s + 1,
+        title: WORKOUT_TITLES[meta.pool][s % WORKOUT_TITLES[meta.pool].length],
+        exercises: EXERCISES_POOL[meta.pool].map(([name, sets, reps, weight, tech], i) => ({
+          id: `${meta.id}-w${w + 1}-s${s + 1}-e${i + 1}`,
           name,
           sets,
           reps,
@@ -66,6 +94,46 @@ function buildPrograms() {
 }
 
 const PROGRAMS = buildPrograms();
+
+// --- Меню питания (раздел «Питание») ---
+const MENUS = [
+  {
+    id: 'menu-deficit',
+    title: 'Похудение · ~1500 ккал',
+    desc: 'Плавный дефицит без голодовок. Белок в каждом приёме пищи.',
+    meals: [
+      { name: 'Завтрак', dish: 'Овсянка на молоке + яйцо + яблоко' },
+      { name: 'Перекус', dish: 'Творог 5% + горсть ягод' },
+      { name: 'Обед', dish: 'Куриная грудка + гречка + салат из овощей с маслом' },
+      { name: 'Перекус', dish: 'Кефир + цельнозерновой хлебец' },
+      { name: 'Ужин', dish: 'Запечённая рыба + овощи на пару' },
+    ],
+  },
+  {
+    id: 'menu-support',
+    title: 'Поддержание · ~2000 ккал',
+    desc: 'Держим форму: баланс белков, жиров и углеводов.',
+    meals: [
+      { name: 'Завтрак', dish: 'Яичница из 2 яиц + тост с авокадо + кофе' },
+      { name: 'Перекус', dish: 'Греческий йогурт + орехи' },
+      { name: 'Обед', dish: 'Говядина + рис + тушёные овощи' },
+      { name: 'Перекус', dish: 'Бутерброд с сыром + помидор' },
+      { name: 'Ужин', dish: 'Индейка + булгур + салат' },
+    ],
+  },
+  {
+    id: 'menu-mass',
+    title: 'Набор массы · ~2500 ккал',
+    desc: 'Профицит калорий для роста мышц. 5–6 приёмов пищи.',
+    meals: [
+      { name: 'Завтрак', dish: 'Омлет из 3 яиц + овсянка с бананом и мёдом' },
+      { name: 'Перекус', dish: 'Творог + мюсли + молоко' },
+      { name: 'Обед', dish: 'Паста с курицей в сливочном соусе + салат' },
+      { name: 'Перекус', dish: 'Протеиновый коктейль + орехи' },
+      { name: 'Ужин', dish: 'Лосось + картофель + брокколи' },
+    ],
+  },
+];
 
 // --- JSON helpers ---
 
@@ -103,17 +171,38 @@ function getUserLogs(userId) {
   return userId ? (loadJson(LOGS_FILE, {})[userId] || {}) : {};
 }
 
-// --- Календарная логика ---
+// --- Аккаунты: { tgId: { user_name, first_name, created, seen } } ---
+// Мини-база клиентов до этапа 2 (оплата/доступы).
 
-// JS getDay(): 0=Вс … 6=Сб → у нас 1=Пн … 7=Вс
-function todayWeekday() {
-  return ((new Date().getDay() + 6) % 7) + 1;
+function saveAccount(tgUser) {
+  if (!tgUser?.id) return;
+  const acc = loadJson(ACCOUNTS_FILE, {});
+  const prev = acc[tgUser.id] || {};
+  acc[tgUser.id] = {
+    user_name: tgUser.username || prev.user_name || '',
+    first_name: tgUser.first_name || prev.first_name || '',
+    created: prev.created || new Date().toISOString(),
+    seen: new Date().toISOString(),
+  };
+  saveJson(ACCOUNTS_FILE, acc);
 }
 
-// Текущая неделя — по календарю: неделя месяца, счёт с первого дня месяца
-// (дни 1–7 → неделя 1, 8–14 → неделя 2 и т.д., максимум 4)
-function currentWeekNum() {
-  return Math.min(Math.floor((new Date().getDate() - 1) / 7) + 1, 4);
+function getAccount(tgId) {
+  return loadJson(ACCOUNTS_FILE, {})[tgId] || null;
+}
+
+// --- Календарная логика ---
+
+// Текущая неделя считается от даты регистрации: неделя 1 сразу,
+// неделя 2 через 7 дней и т.д. (максимум — число недель программы)
+function currentWeekNum(startISO, totalWeeks = 4) {
+  const days = Math.floor((Date.now() - Date.parse(startISO)) / 864e5);
+  return Math.min(Math.max(Math.floor(days / 7) + 1, 1), totalWeeks);
+}
+
+// Через сколько дней открывается неделя num (0 — уже открыта)
+function weekOpensIn(startISO, num) {
+  return Math.max(0, Math.ceil((Date.parse(startISO) + (num - 1) * 7 * 864e5 - Date.now()) / 864e5));
 }
 
 function currentMonthName() {
@@ -122,6 +211,10 @@ function currentMonthName() {
 
 function getProgram(programId) {
   return PROGRAMS.find(p => p.id === programId);
+}
+
+function getMenu(menuId) {
+  return MENUS.find(m => m.id === menuId);
 }
 
 function findWorkout(workoutId) {
@@ -133,7 +226,7 @@ function findWorkout(workoutId) {
 }
 
 module.exports = {
-  LEVELS, WEEKDAYS, WEEKDAYS_FULL, MONTHS_RU, PROGRAMS,
-  getProgram, findWorkout, getUser, saveLog, getUserLogs,
-  todayWeekday, currentWeekNum, currentMonthName,
+  WEEKDAYS, WEEKDAYS_FULL, MONTHS_RU, PROGRAMS, MENUS, GROUPS,
+  getProgram, getMenu, findWorkout, getUser, saveLog, getUserLogs,
+  saveAccount, getAccount, currentWeekNum, weekOpensIn, currentMonthName,
 };
