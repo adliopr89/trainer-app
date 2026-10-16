@@ -95,6 +95,10 @@ try {
   await check('фильтр группы «Формы»', `document.querySelector('#plist .card .t').textContent.includes('Крепкий орех')`, true);
   await ev(`[...document.querySelectorAll('#f-groups .chip')].find(c => c.textContent === 'Все').click()`);
   await sleep(400);
+  // тап по закрытой программе — остаёмся на списке
+  await ev(`[...document.querySelectorAll('#plist .card')].find(c => c.classList.contains('locked')).click()`);
+  await sleep(400);
+  await check('закрытая программа не открывается', `!!document.querySelector('#f-mine')`, true);
 
   console.log('Программа → неделя → занятие:');
   await ev(`[...document.querySelectorAll('#plist .card')].find(c => c.textContent.includes('Хуяе как худею')).click()`);
@@ -102,6 +106,9 @@ try {
   await check('видны все 4 недели', `document.querySelectorAll('.card').length`, 4);
   await check('неделя 2 закрыта', `[...document.querySelectorAll('.card')].some(c => c.classList.contains('locked'))`, true);
   await check('в неделе 1 — 4 занятия', `document.querySelector('.card .s').textContent.includes('4 занятий')`, true);
+  await ev(`document.querySelector('.card.locked').click()`);
+  await sleep(400);
+  await check('закрытая неделя не открывается', `!!document.querySelector('.card.locked')`, true);
   await ev(`document.querySelector('.card:not(.locked)').click()`);
   await waitFor(`document.querySelectorAll('.card').length === 4`);
   await check('«следующее» занятие помечено', `document.querySelector('.badge.part').textContent`, 'следующее');
@@ -138,6 +145,15 @@ try {
   await waitFor(`document.querySelectorAll('.wrow').length === 1`);
   await check('запись веса удалена', `document.querySelectorAll('.wrow').length`, 1);
   await check('вес в шапке откатился на вчерашний', `document.querySelector('.h-weight').textContent.trim()`, '59.5 кг');
+  // перезапись той же даты не создаёт вторую строку
+  await ev(`
+    const yday = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+    document.querySelector('#new-date').value = yday;
+    document.querySelector('#new-weight').value = '59';
+    document.querySelector('#add-w').click();
+  `);
+  await waitFor(`document.querySelector('.h-weight').textContent.trim() === '59 кг'`);
+  await check('перезапись даты не плодит строки', `document.querySelectorAll('.wrow').length`, 1);
 
   console.log('Питание:');
   await ev(`[...document.querySelectorAll('#tabs button')].find(b => b.textContent === 'Питание').click()`);
@@ -151,6 +167,20 @@ try {
   await ev(`document.querySelector('.back').click()`);
   await sleep(400);
   await check('вернулись в список меню', `document.querySelectorAll('.card').length`, 3);
+
+  console.log('Истёкший пакет:');
+  await ev(`
+    const p = JSON.parse(localStorage.getItem('profile'));
+    p.pack.until = new Date(Date.now() - 864e5).toISOString().slice(0, 10); // вчера — истёк
+    localStorage.setItem('profile', JSON.stringify(p));
+  `);
+  await send('Page.navigate', { url: `http://localhost:${PORT}/` });
+  await waitFor(`!!document.querySelector('#f-mine')`);
+  await check('шапка показывает «истёк»', `document.querySelector('.h-pack').textContent.includes('истёк')`, true);
+  await check('«доступное мне» пусто при истёкшем пакете', `document.querySelectorAll('#plist .card').length`, 0);
+  await ev(`document.querySelector('#f-mine').click()`);
+  await waitFor(`document.querySelectorAll('#plist .card').length === 2`);
+  await check('все программы под замком', `[...document.querySelectorAll('#plist .card')].every(c => c.classList.contains('locked'))`, true);
 } catch (e) {
   failed++;
   console.log('  ✗ ОШИБКА:', e.message);

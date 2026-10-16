@@ -15,6 +15,9 @@ function checkInitData(raw) {
   const params = new URLSearchParams(raw);
   const hash = params.get('hash');
   params.delete('hash');
+  // подпись не должна быть бессмертной: initData старше суток — невалидна
+  const auth = parseInt(params.get('auth_date') || '0', 10);
+  if (!auth || Date.now() / 1000 - auth > 86400) return false;
   const data = [...params.entries()].map(([k, v]) => `${k}=${v}`).sort().join('\n');
   const secret = crypto.createHmac('sha256', 'WebAppData').update(process.env.BOT_TOKEN).digest();
   return crypto.createHmac('sha256', secret).update(data).digest('hex') === hash;

@@ -1,31 +1,33 @@
 const tg = window.Telegram?.WebApp;
 tg?.expand();
 tg?.ready();
-tg?.setHeaderColor?.('#0a090b');
-tg?.setBackgroundColor?.('#0a090b');
 tg?.enableClosingConfirmation?.(); // подтверждение при закрытии — не потерять введённые данные
 tg?.disableVerticalSwipes?.();     // свайп вниз не сворачивает мини-апп
 tg?.BackButton?.onClick(() => back());
 
-// Светлая тема Telegram → светлая палитра приложения
-(() => {
+// Тема Telegram → палитра приложения (тёмная — фирменная, светлая — адаптированная).
+// Подписаны на themeChanged: переключение темы на лету тоже отрабатывает.
+function applyTheme() {
   const hex = tg?.themeParams?.bg_color;
   const n = hex && parseInt(hex.slice(1), 16);
-  if (!n) return;
-  const lum = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
-  if (lum <= 0.6) return; // тема тёмная — оставляем фирменную палитру
+  const light = !!n && (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255 > 0.6;
+  const vars = light
+    ? { '--bg': '#f6f4f5', '--text': '#1e1a1c', '--hint': '#8a8188', '--card': '#ffffff', '--line': '#e8e2e6', '--pink-dim': '#ffe3ec', '--pink-soft': '#e0447a' }
+    : { '--bg': '#0a090b', '--text': '#ece7ea', '--hint': '#9a9199', '--card': '#141114', '--line': '#241d22', '--pink-dim': '#3d1523', '--pink-soft': '#ff8fab' };
   const r = document.documentElement.style;
-  r.setProperty('--bg', '#f6f4f5');
-  r.setProperty('--text', '#1e1a1c');
-  r.setProperty('--hint', '#8a8188');
-  r.setProperty('--card', '#ffffff');
-  r.setProperty('--line', '#e8e2e6');
-  r.setProperty('--pink-dim', '#ffe3ec');
-  r.setProperty('--pink-soft', '#e0447a');
-  document.documentElement.style.colorScheme = 'light'; // системные контролы (дата-инпут) в светлой теме
-  tg.setHeaderColor?.('#f6f4f5');
-  tg.setBackgroundColor?.('#f6f4f5');
-})();
+  for (const [k, v] of Object.entries(vars)) r.setProperty(k, v);
+  document.documentElement.style.colorScheme = light ? 'light' : 'dark';
+  const bg = light ? '#f6f4f5' : '#0a090b';
+  tg?.setHeaderColor?.(bg);
+  tg?.setBackgroundColor?.(bg);
+}
+applyTheme();
+tg?.onEvent?.('themeChanged', applyTheme);
+
+// При открытой клавиатуре инпут мог уехать под шапку/край — доводим до центра экрана
+document.addEventListener('focusin', e => {
+  if (e.target.matches?.('input')) setTimeout(() => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300);
+});
 
 const INIT_DATA = tg?.initData || '';
 
@@ -144,7 +146,24 @@ function getPack(p) {
     p.pack = { id: 'start', until: new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10) };
     ls.set('profile', p);
   }
-  return { ...PACKS[p.pack.id], until: p.pack.until };
+  const today = new Date().toISOString().slice(0, 10);
+  const daysLeft = Math.ceil((Date.parse(p.pack.until) - Date.parse(today)) / 864e5);
+  return { ...PACKS[p.pack.id], until: p.pack.until, daysLeft, expired: daysLeft < 0 };
+}
+
+// Тост «Сохранено» и т.п. — визуальный отклик там, где хаптики не работают (браузер)
+let toastTimer;
+function toast(text) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    document.body.appendChild(t);
+  }
+  t.textContent = text;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
 }
 
 
@@ -175,17 +194,15 @@ function renderHead() {
   $head.style.display = '';
   const pack = getPack(p);
   const last = p.weights[p.weights.length - 1];
-  const today = new Date().toISOString().slice(0, 10);
-  const daysLeft = Math.ceil((Date.parse(pack.until) - Date.parse(today)) / 864e5);
-  const leftTxt = daysLeft > 0 ? `${daysLeft} дн.` : daysLeft === 0 ? 'последний день' : 'истёк';
+  const leftTxt = pack.daysLeft > 0 ? `${pack.daysLeft} дн.` : pack.daysLeft === 0 ? 'последний день' : 'истёк';
   const ava = tg?.initDataUnsafe?.user?.photo_url;
-  const initial = (p.name.trim()[0] || '?').toUpperCase();
+  const initial = (esc(p.name.trim()[0] || '?')).toUpperCase();
   $head.innerHTML = `
     <button class="h-pack">${pack.emoji} ${pack.title}<span> · ${leftTxt}</span></button>
     <button class="h-prof">Профиль</button>
-    <div class="h-name">${p.name}, ${p.age}</div>
+    <div class="h-name">${esc(p.name)}, ${p.age}</div>
     <div class="h-weight">${last ? last.w : '—'}<small> кг</small></div>
-    <div class="h-ava">${ava ? `<img src="${ava}" alt="">` : initial}</div>`;
+    <div class="h-ava">${ava ? `<img src="${ava}" alt="" width="42" height="42">` : initial}</div>`;
   const toProfile = () => { tab = 'profile'; stack = [{ view: 'profile' }]; render(); };
   $head.querySelector('.h-pack').onclick = toProfile;
   $head.querySelector('.h-prof').onclick = toProfile;
@@ -198,9 +215,9 @@ const TABS = [
   { id: 'profile', title: 'Мой профиль' },
 ];
 let tab = 'programs';
-// stack: [{view:'programs'|'program'|'week'|'workout'|'menus'|'menu'|'profile', ...}]
+// stack: [{view:'programs'|'program'|'week'|'workout'|'menus'|'menu'|'profile', ..., scroll}]
 let stack = [{ view: 'programs' }];
-const nav = s => { stack.push(s); render(); };
+const nav = s => { stack[stack.length - 1].scroll = window.scrollY; stack.push(s); render(); };
 const back = () => { stack.pop(); render(); };
 
 // ---------- табы ----------
@@ -251,6 +268,7 @@ function viewOnboarding() {
       tg?.HapticFeedback?.notificationOccurred('error');
       return;
     }
+    $app.querySelector('#f-go').disabled = true;
     const today = new Date().toISOString().slice(0, 10);
     ls.set('profile', {
       name, age, since: today,
@@ -270,8 +288,11 @@ function viewOnboarding() {
 const F = { pack: 'all', onlyMine: true, group: 'all' };
 
 async function viewPrograms() {
+  $app.innerHTML = '<div class="empty">Загрузка…</div>';
   const [programs, groups] = await Promise.all([api('/api/programs'), api('/api/groups')]);
-  const myPack = getProfile()?.pack?.id;
+  // истёкший пакет = нет доступа: программы показываем, но все под замком
+  const prof = getProfile();
+  const myPack = prof && !getPack(prof).expired ? prof.pack.id : null;
   const list = programs.filter(p =>
     (F.pack === 'all' || p.packs.includes(F.pack)) &&
     (!F.onlyMine || p.packs.includes(myPack)) &&
@@ -330,6 +351,7 @@ async function viewPrograms() {
 
 // экран программы = все недели видны; неделя N открывается через 7·(N−1) дней от регистрации
 async function viewProgram(s) {
+  $app.innerHTML = '<div class="empty">Загрузка…</div>';
   const p = await api(`/api/programs/${s.id}`);
   $app.innerHTML = `<button class="back">‹ Назад</button>
     <h1 class="page">${p.title}</h1>
@@ -356,6 +378,7 @@ async function viewProgram(s) {
 
 // экран недели = занятия 1..N (все доступны, пока неделя открыта)
 async function viewWeek(s) {
+  $app.innerHTML = '<div class="empty">Загрузка…</div>';
   const p = await api(`/api/programs/${s.programId}`);
   const w = p.weeks.find(x => x.num === s.num);
   $app.innerHTML = `<button class="back">‹ Назад</button>
@@ -377,6 +400,7 @@ async function viewWeek(s) {
 }
 
 async function viewWorkout(s) {
+  $app.innerHTML = '<div class="empty">Загрузка…</div>';
   const wo = await api(`/api/workouts/${s.id}`);
   $app.innerHTML = `<button class="back">‹ Назад</button><h1 class="page">${s.title}</h1>`;
   $app.querySelector('.back').onclick = back;
@@ -421,12 +445,15 @@ async function viewWorkout(s) {
     };
     el.querySelector('.ex-body').onclick = ev => ev.stopPropagation();
     el.querySelector('.save').onclick = async () => {
+      const btn = el.querySelector('.save');
+      btn.disabled = true; // антидвойной тап — лог не улетит дважды
       const sets = [...el.querySelectorAll('input[data-f="w"]')].map(inp => ({
         w: parseFloat(inp.value) || 0,
         r: parseInt(el.querySelector(`input[data-j="${inp.dataset.j}"][data-f="r"]`).value) || 0,
       }));
       await api('/api/log', { method: 'POST', body: JSON.stringify({ exerciseId: e.id, sets, done: true }) });
       tg?.HapticFeedback?.notificationOccurred('success');
+      toast('Сохранено');
       await render();
       // автопереход: раскрываем следующее упражнение
       $app.querySelectorAll('.card.ex')[i + 1]?.classList.add('open');
@@ -437,6 +464,7 @@ async function viewWorkout(s) {
 
 // ---------- Питание ----------
 async function viewMenus() {
+  $app.innerHTML = '<div class="empty">Загрузка…</div>';
   const menus = await api('/api/menus');
   $app.innerHTML = '<h1 class="page">Питание</h1>';
   for (const m of menus) {
@@ -449,6 +477,7 @@ async function viewMenus() {
 }
 
 async function viewMenu(s) {
+  $app.innerHTML = '<div class="empty">Загрузка…</div>';
   const m = await api(`/api/menus/${s.id}`);
   $app.innerHTML = `<button class="back">‹ Назад</button>
     <h1 class="page">${m.title}</h1>
@@ -518,8 +547,10 @@ async function viewProfile() {
       tg?.HapticFeedback?.notificationOccurred('error');
       return;
     }
+    $app.querySelector('#add-w').disabled = true;
     saveWeight(w, d);
     tg?.HapticFeedback?.notificationOccurred('success');
+    toast('Сохранено');
     renderHead();
     render();
   };
@@ -586,6 +617,7 @@ async function render() {
   else if (s.view === 'menus') await viewMenus();
   else if (s.view === 'menu') await viewMenu(s);
   else if (s.view === 'profile') await viewProfile();
+  window.scrollTo(0, s.scroll || 0); // возвращаемся туда, где остановились
 }
 
 // ---------- init ----------

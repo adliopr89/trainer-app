@@ -230,3 +230,16 @@ input[type="date"] { color-scheme: dark; }
 
 /* ккал у приёма пищи */
 .meal .kcal { color: var(--pink); font-size: 12px; font-weight: 700; }
+
+/* iOS не зумирует страницу при фокусе (инпуты <16px зумят) */
+.card.form input, table.sets input { font-size: 16px; }
+
+/* тост «Сохранено» */
+#toast {
+  position: fixed; left: 50%; bottom: 90px; z-index: 50;
+  transform: translateX(-50%) translateY(10px);
+  background: var(--card); border: 1px solid var(--line); color: var(--text);
+  padding: 8px 16px; border-radius: 10px; font-size: 14px;
+  opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+}
+#toast.show { opacity: 1; transform: translateX(-50%); }

@@ -188,6 +188,7 @@ function saveAccount(tgUser) {
   acc[tgUser.id] = {
     user_name: tgUser.username || prev.user_name || '',
     first_name: tgUser.first_name || prev.first_name || '',
+    photo_url: tgUser.photo_url || prev.photo_url || '', // есть только из Mini App initData
     created: prev.created || new Date().toISOString(),
     seen: new Date().toISOString(),
   };
