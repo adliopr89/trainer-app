@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { LEVELS, WEEKDAYS, WEEKDAYS_FULL, MONTHS_RU, PROGRAMS } = require('./db');
 
-const OUT = path.join(__dirname, '..', 'docs');
+const OUT = path.join(__dirname, '..', '..', 'docs');
 fs.mkdirSync(OUT, { recursive: true });
 
 const data = {

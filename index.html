@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Онлайн тренер — стратегия запуска</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: #0e0f13;
+    color: #e8e9ed;
+    line-height: 1.6;
+    padding: 40px 20px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  h1 { font-size: 2rem; margin-bottom: 8px; }
+  .sub { color: #9aa0ad; margin-bottom: 40px; }
+  h2 {
+    font-size: 1.25rem;
+    margin: 40px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #262a33;
+  }
+  h2 .num {
+    display: inline-block;
+    background: #4f7cff;
+    color: #fff;
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    text-align: center;
+    line-height: 28px;
+    font-size: .9rem;
+    margin-right: 10px;
+  }
+  ul { padding-left: 22px; }
+  li { margin-bottom: 8px; }
+  .funnel {
+    display: flex; flex-direction: column; gap: 0;
+    margin: 16px 0;
+  }
+  .step {
+    background: #171a21;
+    border: 1px solid #262a33;
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-weight: 600;
+  }
+  .step small { display: block; font-weight: 400; color: #9aa0ad; margin-top: 4px; }
+  .arrow { text-align: center; color: #4f7cff; font-size: 1.2rem; line-height: 1.4; }
+  .card {
+    background: #171a21;
+    border: 1px solid #262a33;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+  }
+  .card b { color: #8fb0ff; }
+  .tag {
+    display: inline-block;
+    font-size: .75rem;
+    padding: 2px 10px;
+    border-radius: 20px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .tag.free { background: #143d24; color: #6fdc96; }
+  .tag.pay  { background: #3d2a14; color: #ffb45e; }
+  .warn {
+    background: #241a10;
+    border: 1px solid #4a3520;
+    border-left: 3px solid #ffb45e;
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    color: #e8d9c4;
+  }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+  .check { list-style: none; padding-left: 0; }
+  .check li::before { content: "☐ "; color: #4f7cff; }
+  footer { margin-top: 60px; color: #5a6070; font-size: .85rem; }
+  code {
+    background: #262a33;
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-size: .9em;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Онлайн тренер — стратегия запуска</h1>
+  <p class="sub">Курсы для девушек 18–55: тренировки + питание. Старт с нуля. Референс: Анастасия Золотая (лендинг на Tilda + мини-приложение в Telegram).</p>
+
+  <h2><span class="num">→</span>Воронка</h2>
+  <div class="funnel">
+    <div class="step">Короткие видео<small>VK Clips · YouTube Shorts · Reels — 3–5 роликов в неделю</small></div>
+    <div class="arrow">↓</div>
+    <div class="step">Telegram-канал + бот<small>весь трафик сюда, прогрев через контент и кейсы</small></div>
+    <div class="arrow">↓</div>
+    <div class="step">Mini App — бесплатная программа<span class="tag free">лид-магнит</span><small>трекер тренировок, доступ за подписку на канал</small></div>
+    <div class="arrow">↓</div>
+    <div class="step">Платный курс<span class="tag pay">продажа</span><small>8 недель: видео + питание, внутри того же Mini App</small></div>
+    <div class="arrow">↓</div>
+    <div class="step">Апселлы и рефералка<small>новые потоки, дневник питания, «приведи подругу»</small></div>
+  </div>
+
+  <h2><span class="num">1</span>Каналы</h2>
+  <div class="grid">
+    <div class="card"><b>Telegram</b> — основа. Канал + чат + бот. Здесь прогрев, продажи и само приложение.</div>
+    <div class="card"><b>VK Clips</b> — для аудитории 30–55, новые аккаунты получают бесплатный охват.</div>
+    <div class="card"><b>YouTube Shorts</b> — самый дешёвый охват с нуля. Одно видео на все площадки.</div>
+    <div class="card"><b>Зал (офлайн)</b> — QR-код на канал, сарафан от клиенток. Самый тёплый трафик.</div>
+  </div>
+
+  <h2><span class="num">2</span>Mini App как лид-магнит</h2>
+  <div class="card">
+    <b>Бесплатная версия:</b> одна программа «Старт: 2 недели», видео-разборы упражнений, отметки «выполнено», прогресс-бар. Вход автоматически через Telegram — без регистрации. Условие доступа: подписка на канал.
+  </div>
+  <div class="card">
+    <b>Заблокировано:</b> разделы «Питание» и «Курс 8 недель» с кнопкой «Разблокировать» → оплата через Telegram Payments / Prodamus → бот выдаёт доступ.
+  </div>
+  <div class="warn">
+    Важно: приложение само трафик не генерирует — оно конвертирует и удерживает. Без контента и каналов оно не сработает.
+  </div>
+
+  <h2><span class="num">3</span>Этапы разработки</h2>
+  <ul class="check">
+    <li><b>Этап 1 — лид-ген:</b> бот (проверка подписки, выдача доступа) + Mini App: бесплатная программа, трекер, пейволл-заглушки.</li>
+    <li><b>Этап 2 — монетизация:</b> платный курс, оплата, доступы, раздел питания.</li>
+    <li><b>Этап 3 — удержание:</b> напоминания, стрики, дневник питания, рефералка.</li>
+  </ul>
+
+  <h2><span class="num">4</span>Запуск: первые недели</h2>
+  <ul>
+    <li><b>4 клиентки — главный актив.</b> Оформить кейсы: фото «до», замеры, видео-отзывы, процесс тренировок.</li>
+    <li>Упаковать ТГ-канал: описание, 10–15 стартовых постов (техника, питание, разборы ошибок).</li>
+    <li>Короткие видео 3–5 шт/неделю: «делай так, а не так», рацион тренера, мифы, тренировки клиенток.</li>
+    <li>Первый поток — «бета»: дёшево или бесплатно за отзыв (5–10 человек) → кейсы → цена растёт с каждым потоком.</li>
+    <li>Посевы в городских ТГ-каналах и таргет VK — только когда есть 3–5 кейсов.</li>
+  </ul>
+
+  <h2><span class="num">5</span>Чего не делать на старте</h2>
+  <ul>
+    <li>GetCourse — дорого, достаточно Mini App + бот.</li>
+    <li>Лендинг на Tilda — позже, под первый платный набор.</li>
+    <li>CDN для видео — YouTube «по ссылке» или файлы в Telegram.</li>
+    <li>Лить платный трафик до появления кейсов.</li>
+  </ul>
+
+  <h2><span class="num">6</span>Технический стек (MVP)</h2>
+  <div class="card">
+    <b>Бот:</b> aiogram (Python) или grammY/Telegraf (Node) — выбрать.<br>
+    <b>Mini App:</b> Telegram Web Apps API + React/Vue, стиль под нативный ТГ.<br>
+    <b>Бэкенд:</b> Supabase free tier или SQLite.<br>
+    <b>Хостинг:</b> Vercel / Render free tier.<br>
+    <b>Оплата:</b> Telegram Payments / Stars / Prodamus.
+  </div>
+
+  <footer>Проект: Онлайн тренер · AGENTS.md — контекст для Devin · index.html — этот файл</footer>
+
+</div>
+</body>
+</html>
