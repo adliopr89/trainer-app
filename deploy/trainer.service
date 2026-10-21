@@ -1,0 +1,13 @@
+[Unit]
+Description=Trainer Mini App + Telegram bot
+After=network.target
+
+[Service]
+WorkingDirectory=/root/app
+ExecStart=/usr/bin/node server/index.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
